@@ -3,9 +3,9 @@ import logging
 from flask import Flask, render_template, request, jsonify, flash, session
 import threading
 import time
-import random
-import json
 from datetime import datetime
+from config import API_KEY, SECRET_KEY, BASE_URL
+from api_client import RoostooClient
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, 
@@ -16,32 +16,12 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "default_secret_key_for_dev")
 
-# Mock API configuration
-API_KEY = os.getenv('API_KEY', 'sample_api_key')
-SECRET_KEY = os.getenv('SECRET_KEY', 'sample_secret_key')
-BASE_URL = os.getenv('BASE_URL', 'https://mock-api.roostoo.com')
+# Initialize API client
+api_client = RoostooClient(API_KEY, SECRET_KEY, BASE_URL)
 
-# Mock trading environment and trader
+# Trading environment variables
 is_trading_active = False
 trader_thread = None
-
-# Mock data for demonstration
-mock_btc_price = 68452.75
-mock_wallet = {
-    "Success": True,
-    "SpotWallet": {
-        "BTC": {
-            "Free": 0.15,
-            "Lock": 0.0
-        },
-        "USD": {
-            "Free": 25000.0,
-            "Lock": 0.0
-        }
-    }
-}
-
-# Mock trading record
 trade_history = []
 
 def start_trading_thread():
@@ -49,59 +29,87 @@ def start_trading_thread():
     global is_trading_active
     try:
         while is_trading_active:
-            # Simulate a trading decision
-            execute_mock_trading_step()
-            time.sleep(10)  # Shorter interval for demo purposes
+            # Execute trading logic
+            execute_trading_step()
+            time.sleep(300)  # 5-minute interval between trading decisions
     except Exception as e:
         logger.error(f"Error in trading thread: {str(e)}")
         is_trading_active = False
 
-def execute_mock_trading_step():
-    """Execute a mock trading step with random decisions"""
-    global mock_btc_price, mock_wallet, trade_history
-    
-    # Simulate price movement
-    price_change = random.uniform(-500, 500)
-    mock_btc_price += price_change
-    
-    # Random trading decision
-    action = random.choice([0, 0, 0, 1, 2])  # 0: HOLD, 1: BUY, 2: SELL - weighted toward HOLD
-    
-    if action == 1:  # BUY
-        if mock_wallet["SpotWallet"]["USD"]["Free"] > mock_btc_price * 0.01:
-            quantity = 0.01
-            cost = quantity * mock_btc_price
-            mock_wallet["SpotWallet"]["USD"]["Free"] -= cost
-            mock_wallet["SpotWallet"]["BTC"]["Free"] += quantity
+def execute_trading_step():
+    """Execute a trading step based on market conditions"""
+    try:
+        # Get current market data
+        market_data = api_client.get_ticker("BTC/USD")
+        
+        if not market_data.get("Success", False):
+            logger.error(f"Failed to get market data: {market_data.get('ErrMsg', 'Unknown error')}")
+            return
+        
+        # Get current wallet balance
+        balance_data = api_client.get_balance()
+        
+        if not balance_data.get("Success", False):
+            logger.error(f"Failed to get wallet balance: {balance_data.get('ErrMsg', 'Unknown error')}")
+            return
+        
+        # Extract price and balance information
+        price_data = market_data["Data"]["BTC/USD"]
+        current_price = price_data["LastPrice"]
+        
+        # Wallet data could be in different formats depending on API version
+        wallet_data = balance_data.get("Wallet", balance_data.get("SpotWallet", {}))
+        btc_balance = wallet_data.get("BTC", {}).get("Free", 0)
+        usd_balance = wallet_data.get("USD", {}).get("Free", 0)
+        
+        # Simple trading strategy based on price movement
+        # This is just a placeholder - replace with your actual trading logic
+        price_change = price_data.get("Change", 0)
+        
+        if price_change > 0.01 and usd_balance > current_price * 0.01:  # Uptrend, BUY
+            quantity = 0.01  # Fixed quantity for demonstration
+            result = api_client.place_order("BTC/USD", "BUY", quantity)
             
-            # Record the trade
-            trade_history.append({
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "side": "BUY",
-                "price": mock_btc_price,
-                "quantity": quantity,
-                "total": cost,
-                "status": "FILLED"
-            })
-            logger.info(f"[MOCK] Executed BUY: {quantity} BTC at ${mock_btc_price:.2f}")
+            if result.get("Success", False):
+                logger.info(f"Executed BUY: {quantity} BTC at ${current_price:.2f}")
+                
+                # Record trade in history
+                order_detail = result.get("OrderDetail", {})
+                trade_history.append({
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "pair": order_detail.get("Pair", "BTC/USD"),
+                    "side": "BUY",
+                    "price": current_price,
+                    "quantity": quantity,
+                    "total": quantity * current_price,
+                    "status": order_detail.get("Status", "FILLED")
+                })
+            else:
+                logger.error(f"Failed to execute BUY: {result.get('ErrMsg', 'Unknown error')}")
+                
+        elif price_change < -0.01 and btc_balance >= 0.01:  # Downtrend, SELL
+            quantity = 0.01  # Fixed quantity for demonstration
+            result = api_client.place_order("BTC/USD", "SELL", quantity)
             
-    elif action == 2:  # SELL
-        if mock_wallet["SpotWallet"]["BTC"]["Free"] >= 0.01:
-            quantity = 0.01
-            proceeds = quantity * mock_btc_price
-            mock_wallet["SpotWallet"]["USD"]["Free"] += proceeds
-            mock_wallet["SpotWallet"]["BTC"]["Free"] -= quantity
-            
-            # Record the trade
-            trade_history.append({
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "side": "SELL",
-                "price": mock_btc_price,
-                "quantity": quantity,
-                "total": proceeds,
-                "status": "FILLED"
-            })
-            logger.info(f"[MOCK] Executed SELL: {quantity} BTC at ${mock_btc_price:.2f}")
+            if result.get("Success", False):
+                logger.info(f"Executed SELL: {quantity} BTC at ${current_price:.2f}")
+                
+                # Record trade in history
+                order_detail = result.get("OrderDetail", {})
+                trade_history.append({
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "pair": order_detail.get("Pair", "BTC/USD"),
+                    "side": "SELL",
+                    "price": current_price,
+                    "quantity": quantity,
+                    "total": quantity * current_price,
+                    "status": order_detail.get("Status", "FILLED")
+                })
+            else:
+                logger.error(f"Failed to execute SELL: {result.get('ErrMsg', 'Unknown error')}")
+
+    except Exception as e:
+        logger.error(f"Error executing trading step: {str(e)}")
 
 @app.route('/')
 def index():
@@ -123,23 +131,7 @@ def get_market_data():
     """API endpoint to fetch market data"""
     try:
         pair = request.args.get('pair', 'BTC/USD')
-        
-        # Mock market data
-        market_data = {
-            "Success": True,
-            "ServerTime": int(time.time() * 1000),
-            "Data": {
-                "BTC/USD": {
-                    "MaxBid": mock_btc_price - 10,
-                    "MinAsk": mock_btc_price + 10,
-                    "LastPrice": mock_btc_price,
-                    "Change": 0.0132,
-                    "CoinTradeValue": 4320.15,
-                    "UnitTradeValue": 295843215.67
-                }
-            }
-        }
-        
+        market_data = api_client.get_ticker(pair)
         return jsonify({"success": True, "data": market_data})
     except Exception as e:
         logger.error(f"Error fetching market data: {str(e)}")
@@ -149,7 +141,8 @@ def get_market_data():
 def get_wallet_balance():
     """API endpoint to fetch wallet balance"""
     try:
-        return jsonify({"success": True, "data": mock_wallet})
+        balance = api_client.get_balance()
+        return jsonify({"success": True, "data": balance})
     except Exception as e:
         logger.error(f"Error fetching wallet balance: {str(e)}")
         return jsonify({"success": False, "error": str(e)})
@@ -191,84 +184,27 @@ def stop_trading():
 @app.route('/api/execute-trade', methods=['POST'])
 def execute_manual_trade():
     """API endpoint to execute a manual trade"""
-    global mock_wallet, mock_btc_price, trade_history
-    
     try:
         pair = request.form.get('pair', 'BTC/USD')
         side = request.form.get('side', 'BUY')
         quantity = float(request.form.get('quantity', 0.01))
         
-        # Execute mock trade
-        if side == "BUY":
-            cost = quantity * mock_btc_price
-            if mock_wallet["SpotWallet"]["USD"]["Free"] >= cost:
-                mock_wallet["SpotWallet"]["USD"]["Free"] -= cost
-                mock_wallet["SpotWallet"]["BTC"]["Free"] += quantity
-                
-                # Record the trade
-                trade_history.append({
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "side": "BUY",
-                    "price": mock_btc_price,
-                    "quantity": quantity,
-                    "total": cost,
-                    "status": "FILLED"
-                })
-                
-                result = {
-                    "Success": True,
-                    "OrderDetail": {
-                        "Pair": pair,
-                        "OrderID": random.randint(1000, 9999),
-                        "Status": "FILLED",
-                        "Side": side,
-                        "Type": "MARKET",
-                        "Price": mock_btc_price,
-                        "Quantity": quantity,
-                        "FilledQuantity": quantity
-                    }
-                }
-            else:
-                result = {
-                    "Success": False,
-                    "ErrMsg": "Insufficient USD balance"
-                }
-        else:  # SELL
-            if mock_wallet["SpotWallet"]["BTC"]["Free"] >= quantity:
-                proceeds = quantity * mock_btc_price
-                mock_wallet["SpotWallet"]["USD"]["Free"] += proceeds
-                mock_wallet["SpotWallet"]["BTC"]["Free"] -= quantity
-                
-                # Record the trade
-                trade_history.append({
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "side": "SELL",
-                    "price": mock_btc_price,
-                    "quantity": quantity,
-                    "total": proceeds,
-                    "status": "FILLED"
-                })
-                
-                result = {
-                    "Success": True,
-                    "OrderDetail": {
-                        "Pair": pair,
-                        "OrderID": random.randint(1000, 9999),
-                        "Status": "FILLED",
-                        "Side": side,
-                        "Type": "MARKET",
-                        "Price": mock_btc_price,
-                        "Quantity": quantity,
-                        "FilledQuantity": quantity
-                    }
-                }
-            else:
-                result = {
-                    "Success": False,
-                    "ErrMsg": "Insufficient BTC balance"
-                }
+        # Execute the trade using the API client
+        result = api_client.place_order(pair, side, quantity)
         
         if result.get("Success", False):
+            # Record the trade in history
+            order_detail = result.get("OrderDetail", {})
+            trade_history.append({
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "pair": order_detail.get("Pair", pair),
+                "side": side,
+                "price": order_detail.get("Price", 0),
+                "quantity": quantity,
+                "total": quantity * order_detail.get("Price", 0),
+                "status": order_detail.get("Status", "FILLED")
+            })
+            
             flash(f'Trade executed successfully: {side} {quantity} {pair}', 'success')
             return jsonify({"success": True, "data": result})
         else:
@@ -288,7 +224,7 @@ def trading_status():
     
     return jsonify({
         "is_active": is_trading_active,
-        "environment_ready": True,  # Mock values
+        "environment_ready": True,
         "trader_ready": True
     })
 
@@ -296,7 +232,30 @@ def trading_status():
 def get_trade_history():
     """API endpoint to get trade history"""
     global trade_history
-    return jsonify({"success": True, "data": trade_history})
+    
+    try:
+        # If we don't have any recorded trades yet, try to fetch from the API
+        if not trade_history:
+            # Query recent orders
+            orders = api_client.query_order(pair="BTC/USD")
+            
+            if orders.get("Success", False) and "OrderList" in orders:
+                for order in orders["OrderList"]:
+                    if order.get("Status") in ["FILLED", "PARTIALLY_FILLED"]:
+                        trade_history.append({
+                            "timestamp": datetime.fromtimestamp(order.get("CreateTimestamp", 0)/1000).strftime("%Y-%m-%d %H:%M:%S"),
+                            "pair": order.get("Pair", "BTC/USD"),
+                            "side": order.get("Side", "BUY"),
+                            "price": order.get("FilledAverPrice", 0),
+                            "quantity": order.get("FilledQuantity", 0),
+                            "total": order.get("FilledQuantity", 0) * order.get("FilledAverPrice", 0),
+                            "status": order.get("Status", "FILLED")
+                        })
+        
+        return jsonify({"success": True, "data": trade_history})
+    except Exception as e:
+        logger.error(f"Error fetching trade history: {str(e)}")
+        return jsonify({"success": False, "error": str(e)})
 
 @app.errorhandler(404)
 def page_not_found(e):
