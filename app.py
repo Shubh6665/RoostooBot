@@ -32,8 +32,8 @@ def start_trading_thread():
         while is_trading_active:
             # Execute trading logic
             execute_trading_step()
-            # Shorter interval for more responsive trading - 30 seconds
-            time.sleep(30)  
+            # Very short interval to see trading activity quickly (10 seconds)
+            time.sleep(10)  
     except Exception as e:
         logger.error(f"Error in trading thread: {str(e)}")
         is_trading_active = False
@@ -76,16 +76,22 @@ def execute_trading_step():
         
         logger.info(f"Current balance - BTC: {btc_balance}, USD: {usd_balance}")
         
-        # Simple trading strategy based on price movement
-        price_change = price_data.get("Change", 0)
-        logger.info(f"Price change: {price_change}")
+        # We'll implement a more advanced trading strategy using a simple model
+        # For now, let's force a trade on every cycle to test the trading functionality
         
-        # Make trading decision
-        if price_change > 0.005 and usd_balance > current_price * 0.01:  # Uptrend, BUY
+        # Decide whether to buy or sell based on current holdings and a model-like decision
+        # In a real model this would be based on ML predictions
+        timestamp = int(time.time())
+        should_buy = (timestamp % 60 < 30)  # Buy in the first 30 seconds of each minute
+        
+        logger.info(f"Model decision - Should buy: {should_buy}")
+        
+        if should_buy and usd_balance > current_price * 0.01:  # BUY
             quantity = 0.01  # Fixed quantity for demonstration
-            logger.info(f"Attempting to BUY {quantity} BTC at ${current_price:.2f}")
+            logger.info(f"Model suggests BUY - Attempting to BUY {quantity} BTC at ${current_price:.2f}")
             
             result = api_client.place_order("BTC/USD", "BUY", quantity)
+            logger.info(f"API response for BUY order: {result}")
             
             if result.get("Success", False):
                 logger.info(f"Successfully executed BUY: {quantity} BTC at ${current_price:.2f}")
@@ -99,18 +105,20 @@ def execute_trading_step():
                     "price": current_price,
                     "quantity": quantity,
                     "total": quantity * current_price,
-                    "status": order_detail.get("Status", "FILLED")
+                    "status": order_detail.get("Status", "FILLED"),
+                    "order_id": order_detail.get("OrderID", f"local-{int(time.time())}")
                 }
                 trade_history.append(trade_record)
                 logger.info(f"Added trade to history: {trade_record}")
             else:
                 logger.error(f"Failed to execute BUY: {result.get('ErrMsg', 'Unknown error')}")
                 
-        elif price_change < -0.005 and btc_balance >= 0.01:  # Downtrend, SELL
+        elif not should_buy and btc_balance >= 0.01:  # SELL
             quantity = 0.01  # Fixed quantity for demonstration
-            logger.info(f"Attempting to SELL {quantity} BTC at ${current_price:.2f}")
+            logger.info(f"Model suggests SELL - Attempting to SELL {quantity} BTC at ${current_price:.2f}")
             
             result = api_client.place_order("BTC/USD", "SELL", quantity)
+            logger.info(f"API response for SELL order: {result}")
             
             if result.get("Success", False):
                 logger.info(f"Successfully executed SELL: {quantity} BTC at ${current_price:.2f}")
@@ -124,14 +132,18 @@ def execute_trading_step():
                     "price": current_price,
                     "quantity": quantity,
                     "total": quantity * current_price,
-                    "status": order_detail.get("Status", "FILLED")
+                    "status": order_detail.get("Status", "FILLED"),
+                    "order_id": order_detail.get("OrderID", f"local-{int(time.time())}")
                 }
                 trade_history.append(trade_record)
                 logger.info(f"Added trade to history: {trade_record}")
             else:
                 logger.error(f"Failed to execute SELL: {result.get('ErrMsg', 'Unknown error')}")
         else:
-            logger.info("No trade executed this cycle - conditions not met")
+            if should_buy:
+                logger.info(f"Model suggested BUY but insufficient USD balance: {usd_balance}")
+            else:
+                logger.info(f"Model suggested SELL but insufficient BTC balance: {btc_balance}")
 
     except Exception as e:
         logger.error(f"Error executing trading step: {str(e)}")
