@@ -1,168 +1,88 @@
-{% extends "layout.html" %}
+{% extends 'base.html' %}
+
+{% block title %}Trading Dashboard{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card bg-dark">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <h3 class="card-title mb-0">Trading Bot Dashboard</h3>
-                    <p class="text-muted mb-0">Monitor your bot's performance and market data in real-time</p>
-                </div>
-                <div>
-                    <span class="me-2">
-                        <span class="status-indicator {% if bot_status == 'running' %}status-running{% else %}status-stopped{% endif %}"></span>
-                        Status: <span id="bot-status-indicator">{{ bot_status|capitalize }}</span>
-                    </span>
-                    <button id="start-bot-btn" class="btn btn-success me-2" {% if bot_status == 'running' %}disabled{% endif %}>
-                        <i class="fas fa-play me-1"></i> Start
-                    </button>
-                    <button id="stop-bot-btn" class="btn btn-danger" {% if bot_status == 'stopped' %}disabled{% endif %}>
-                        <i class="fas fa-stop me-1"></i> Stop
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row mb-4">
-    <!-- Portfolio Performance -->
-    <div class="col-md-6 col-lg-3 mb-4 mb-lg-0">
-        <div class="card trading-card h-100">
-            <div class="card-body">
-                <h5 class="card-title text-center">Portfolio Value</h5>
-                <h3 class="text-center" id="portfolio-value">${{ metrics.current_balance|round(2) }}</h3>
-                <div class="text-center mb-2">
-                    <span id="profit-loss-indicator" class="badge {% if metrics.profit_loss >= 0 %}bg-success{% else %}bg-danger{% endif %}">
-                        {% if metrics.profit_loss >= 0 %}+{% endif %}${{ metrics.profit_loss|round(2) }}
-                    </span>
-                </div>
-                <div class="progress">
-                    <div id="profit-progress" class="progress-bar {% if metrics.profit_loss >= 0 %}bg-success{% else %}bg-danger{% endif %}" role="progressbar" 
-                        style="width: {{ (metrics.profit_loss / metrics.initial_balance * 100)|abs|round(2) }}%" 
-                        aria-valuenow="{{ (metrics.profit_loss / metrics.initial_balance * 100)|abs|round(2) }}" 
-                        aria-valuemin="0" aria-valuemax="100">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Performance Metrics -->
-    <div class="col-md-6 col-lg-3 mb-4 mb-lg-0">
-        <div class="card trading-card h-100">
-            <div class="card-body">
-                <h5 class="card-title">Performance</h5>
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Win Rate:</span>
-                        <span id="win-rate">{{ metrics.win_rate|round(2) }}%</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Trades Executed:</span>
-                        <span id="trades-executed">{{ metrics.trades_executed }}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>Initial Balance:</span>
-                        <span>${{ metrics.initial_balance|round(2) }}</span>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Current Price -->
-    <div class="col-md-6 col-lg-3 mb-4 mb-lg-0">
-        <div class="card trading-card h-100">
-            <div class="card-body">
-                <h5 class="card-title">BTC/USD</h5>
-                <h3 class="text-center" id="current-price">Loading...</h3>
-                <p class="text-center mb-0">
-                    <span id="price-change" class="badge">0.00%</span>
-                </p>
-                <p class="text-center text-muted small" id="price-updated">Last updated: --</p>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Last Trade -->
-    <div class="col-md-6 col-lg-3">
-        <div class="card trading-card h-100">
-            <div class="card-body">
-                <h5 class="card-title">Last Trade</h5>
-                {% if last_trade %}
-                <div id="last-trade-info">
-                    <p class="mb-1">
-                        <span class="badge {% if last_trade.action == 'BUY' %}bg-success{% else %}bg-danger{% endif %}">
-                            {{ last_trade.action }}
-                        </span>
-                        <span class="text-muted">{{ last_trade.timestamp }}</span>
-                    </p>
-                    <p class="mb-1">Price: ${{ last_trade.price|round(2) }}</p>
-                    <p class="mb-0">Quantity: {{ last_trade.quantity|round(6) }} BTC</p>
-                </div>
-                {% else %}
-                <div id="last-trade-info">
-                    <p class="text-center text-muted">No trades executed yet</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row mb-4">
-    <!-- Price Chart -->
-    <div class="col-lg-8 mb-4 mb-lg-0">
-        <div class="card trading-card">
-            <div class="card-body">
-                <h5 class="card-title">BTC/USD Price Chart</h5>
-                <div style="height: 300px;">
-                    <canvas id="price-chart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Trading History -->
-    <div class="col-lg-4">
-        <div class="card trading-card">
-            <div class="card-header">Trading History</div>
-            <div class="card-body" style="height: 300px; overflow-y: auto;">
-                <div id="trading-history">
-                    <div class="text-center text-muted" id="empty-history">
-                        {% if metrics.trades_executed == 0 %}
-                            No trading history available
-                        {% endif %}
-                    </div>
-                    <!-- Trading history will be populated here -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+<h1 class="mb-4">Trading Dashboard</h1>
 
 <div class="row">
-    <!-- Wallet Balance -->
-    <div class="col-12">
-        <div class="card trading-card">
-            <div class="card-header">Wallet Balance</div>
+    <div class="col-md-8">
+        <div class="card">
             <div class="card-body">
+                <h5 class="card-title">BTC/USD Price Chart</h5>
+                <div class="chart-container" style="position: relative; height:400px;">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Portfolio Overview</h5>
+                <div id="portfolio-overview">
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5 class="card-title">Manual Trading</h5>
+                <form id="manual-trade-form">
+                    <div class="mb-3">
+                        <label for="tradingPair" class="form-label">Trading Pair</label>
+                        <select class="form-select" id="tradingPair" name="pair">
+                            <option value="BTC/USD" selected>BTC/USD</option>
+                            <option value="ETH/USD">ETH/USD</option>
+                            <option value="LINK/USD">LINK/USD</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tradeSide" class="form-label">Action</label>
+                        <select class="form-select" id="tradeSide" name="side">
+                            <option value="BUY" selected>BUY</option>
+                            <option value="SELL">SELL</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="tradeQuantity" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="tradeQuantity" name="quantity" step="0.001" min="0.001" value="0.01">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-exchange-alt me-1"></i>Execute Trade
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Recent Trading Activity</h5>
                 <div class="table-responsive">
-                    <table class="table" id="wallet-table">
+                    <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Asset</th>
-                                <th>Free</th>
-                                <th>Locked</th>
+                                <th>Time</th>
+                                <th>Pair</th>
+                                <th>Side</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
                                 <th>Total</th>
-                                <th>Value (USD)</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="recent-trades-table">
                             <tr>
-                                <td colspan="5" class="text-center">Loading wallet data...</td>
+                                <td colspan="7" class="text-center">Loading trades...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -171,12 +91,309 @@
         </div>
     </div>
 </div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Performance Metrics</h5>
+                <div class="table-responsive">
+                    <table class="table">
+                        <tbody id="performance-metrics">
+                            <tr>
+                                <td>Total Trades</td>
+                                <td id="metric-total-trades">-</td>
+                            </tr>
+                            <tr>
+                                <td>Win Rate</td>
+                                <td id="metric-win-rate">-</td>
+                            </tr>
+                            <tr>
+                                <td>Profit Factor</td>
+                                <td id="metric-profit-factor">-</td>
+                            </tr>
+                            <tr>
+                                <td>Sharpe Ratio</td>
+                                <td id="metric-sharpe-ratio">-</td>
+                            </tr>
+                            <tr>
+                                <td>Max Drawdown</td>
+                                <td id="metric-max-drawdown">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Bot Activity Log</h5>
+                <div id="activity-log" class="activity-log">
+                    <div class="log-entry">
+                        <span class="log-time">12:30:45</span>
+                        <span class="log-message">Bot initialized and ready to trade</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">12:35:10</span>
+                        <span class="log-message">Fetched market data for BTC/USD</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-time">12:40:22</span>
+                        <span class="log-message">Model predicted action: HOLD</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/dashboard.js"></script>
-{% endblock %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Global variables for price chart
+        let priceChart;
+        let priceData = {
+            labels: [],
+            datasets: [{
+                label: 'BTC/USD Price',
+                data: [],
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.1,
+                fill: false
+            }]
+        };
+        
+        // Initialize price chart
+        function initPriceChart() {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: priceData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(200, 200, 200, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    animation: {
+                        duration: 0
+                    }
+                }
+            });
+        }
+        
+        // Function to update the price chart with new data
+        function updatePriceChart(price) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            
+            // Add new data point
+            priceData.labels.push(timeString);
+            priceData.datasets[0].data.push(price);
+            
+            // Keep only the last 30 data points to avoid overcrowding
+            if (priceData.labels.length > 30) {
+                priceData.labels.shift();
+                priceData.datasets[0].data.shift();
+            }
+            
+            // Update the chart
+            priceChart.update();
+        }
+        
+        // Function to fetch market data and update UI
+        function fetchMarketData() {
+            fetch('/api/market-data?pair=BTC/USD')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const marketData = data.data.Data["BTC/USD"];
+                    const price = marketData.LastPrice;
+                    
+                    // Update price chart
+                    updatePriceChart(price);
+                    
+                    // Update activity log
+                    addLogEntry(`Fetched market data: BTC/USD at $${price.toFixed(2)}`);
+                } else {
+                    console.error('Failed to fetch market data:', data.error);
+                    addLogEntry(`Error fetching market data: ${data.error}`, true);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching market data:', error);
+                addLogEntry(`Error fetching market data: ${error}`, true);
+            });
+        }
+        
+        // Function to fetch and display wallet balance
+        function fetchWalletBalance() {
+            fetch('/api/wallet-balance')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let walletData;
+                    if (data.data.Wallet) {
+                        walletData = data.data.Wallet;
+                    } else if (data.data.SpotWallet) {
+                        walletData = data.data.SpotWallet;
+                    } else {
+                        throw new Error('Unexpected wallet data format');
+                    }
 
-{% block last_updated %}
-{{ now.strftime('%Y-%m-%d %H:%M:%S') }}
+                    // Get USD and BTC balances
+                    const usdBalance = walletData.USD?.Free || 0;
+                    const btcBalance = walletData.BTC?.Free || 0;
+                    
+                    // Fetch current BTC price to calculate total value
+                    fetch('/api/market-data?pair=BTC/USD')
+                    .then(response => response.json())
+                    .then(marketData => {
+                        if (marketData.success) {
+                            const btcPrice = marketData.data.Data["BTC/USD"].LastPrice;
+                            const btcValue = btcBalance * btcPrice;
+                            const totalValue = usdBalance + btcValue;
+                            
+                            // Calculate portfolio allocation percentages
+                            const usdPercent = (usdBalance / totalValue * 100).toFixed(1);
+                            const btcPercent = (btcValue / totalValue * 100).toFixed(1);
+                            
+                            // Update portfolio overview card
+                            document.getElementById('portfolio-overview').innerHTML = `
+                                <div class="total-portfolio-value mb-3">
+                                    <h3>$${totalValue.toFixed(2)}</h3>
+                                </div>
+                                <div class="asset-breakdown">
+                                    <div class="asset-item d-flex justify-content-between mb-2">
+                                        <span>USD:</span>
+                                        <span>$${usdBalance.toFixed(2)} (${usdPercent}%)</span>
+                                    </div>
+                                    <div class="asset-item d-flex justify-content-between mb-2">
+                                        <span>BTC:</span>
+                                        <span>${btcBalance.toFixed(8)} ($${btcValue.toFixed(2)}, ${btcPercent}%)</span>
+                                    </div>
+                                </div>
+                                <div class="portfolio-allocation mt-3">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: ${usdPercent}%" aria-valuenow="${usdPercent}" aria-valuemin="0" aria-valuemax="100">USD</div>
+                                        <div class="progress-bar bg-warning" role="progressbar" style="width: ${btcPercent}%" aria-valuenow="${btcPercent}" aria-valuemin="0" aria-valuemax="100">BTC</div>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            // Update activity log
+                            addLogEntry(`Updated portfolio: Total value $${totalValue.toFixed(2)}`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching BTC price:', error);
+                    });
+                } else {
+                    console.error('Failed to fetch wallet balance:', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching wallet balance:', error);
+            });
+        }
+        
+        // Function to add a log entry to the activity log
+        function addLogEntry(message, isError = false) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            
+            const logContainer = document.getElementById('activity-log');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            
+            if (isError) {
+                logEntry.classList.add('log-error');
+            }
+            
+            logEntry.innerHTML = `
+                <span class="log-time">${timeString}</span>
+                <span class="log-message">${message}</span>
+            `;
+            
+            logContainer.insertBefore(logEntry, logContainer.firstChild);
+            
+            // Limit to last 50 entries
+            if (logContainer.children.length > 50) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+        
+        // Handle manual trade form submission
+        document.getElementById('manual-trade-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const pair = document.getElementById('tradingPair').value;
+            const side = document.getElementById('tradeSide').value;
+            const quantity = document.getElementById('tradeQuantity').value;
+            
+            // Validate inputs
+            if (!pair || !side || !quantity || parseFloat(quantity) <= 0) {
+                alert('Please fill all fields with valid values');
+                return;
+            }
+            
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('pair', pair);
+            formData.append('side', side);
+            formData.append('quantity', quantity);
+            
+            // Execute the trade
+            fetch('/api/execute-trade', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    addLogEntry(`Successfully executed trade: ${side} ${quantity} ${pair}`);
+                    fetchWalletBalance();  // Update wallet balance after trade
+                } else {
+                    addLogEntry(`Error executing trade: ${data.error}`, true);
+                }
+            })
+            .catch(error => {
+                addLogEntry(`Error executing trade: ${error}`, true);
+            });
+        });
+        
+        // Initialize the dashboard
+        initPriceChart();
+        fetchMarketData();
+        fetchWalletBalance();
+        
+        // Set up periodic refreshes
+        setInterval(fetchMarketData, 5000);   // Update price data every 5 seconds
+        setInterval(fetchWalletBalance, 30000);  // Update wallet balance every 30 seconds
+        
+        // Initialize with a welcome message
+        addLogEntry('Trading dashboard initialized');
+    });
+</script>
 {% endblock %}

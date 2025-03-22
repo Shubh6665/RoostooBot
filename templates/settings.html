@@ -1,57 +1,80 @@
-{% extends "layout.html" %}
+{% extends 'base.html' %}
+
+{% block title %}Bot Settings{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card bg-dark">
-            <div class="card-body">
-                <h3 class="card-title">Trading Bot Settings</h3>
-                <p class="text-muted">Configure the behavior of your automated trading system</p>
-            </div>
-        </div>
-    </div>
-</div>
+<h1 class="mb-4">Bot Settings</h1>
 
 <div class="row">
-    <div class="col-lg-6 mb-4">
-        <div class="card trading-card">
-            <div class="card-header">
-                <h5 class="mb-0">Trading Configuration</h5>
-            </div>
+    <div class="col-md-6">
+        <div class="card">
             <div class="card-body">
-                <form id="settings-form">
-                    <!-- Trading Pair -->
+                <h5 class="card-title">Trading Parameters</h5>
+                <form id="trading-params-form">
                     <div class="mb-3">
-                        <label for="trading-pair" class="form-label">Trading Pair</label>
-                        <select class="form-select" id="trading-pair" name="trading_pair">
+                        <label for="tradingPair" class="form-label">Trading Pair</label>
+                        <select class="form-select" id="tradingPair" name="pair">
                             <option value="BTC/USD" selected>BTC/USD</option>
                             <option value="ETH/USD">ETH/USD</option>
-                            <option value="BNB/USD">BNB/USD</option>
-                            <option value="XRP/USD">XRP/USD</option>
-                            <option value="ADA/USD">ADA/USD</option>
+                            <option value="LINK/USD">LINK/USD</option>
                         </select>
-                        <div class="form-text">Select the cryptocurrency pair you want to trade</div>
                     </div>
                     
-                    <!-- Risk Level -->
                     <div class="mb-3">
-                        <label for="risk-level" class="form-label">Risk Level: <span id="risk-value">2%</span></label>
-                        <input type="range" class="form-range" id="risk-level" name="risk_level" min="0.5" max="10" step="0.5" value="2">
+                        <label for="maxPositionSize" class="form-label">Maximum Position Size (BTC)</label>
+                        <input type="number" class="form-control" id="maxPositionSize" name="max_position_size" min="0.001" step="0.001" value="0.1">
+                        <div class="form-text">Maximum amount of crypto to buy in a single trade</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="riskPercentage" class="form-label">Risk Percentage</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="riskPercentage" name="risk_percentage" min="0.1" max="100" step="0.1" value="2.0">
+                            <span class="input-group-text">%</span>
+                        </div>
                         <div class="form-text">Percentage of portfolio to risk per trade</div>
                     </div>
                     
-                    <!-- Model Selection -->
                     <div class="mb-3">
-                        <label for="model-selection" class="form-label">Trading Model</label>
-                        <select class="form-select" id="model-selection" name="model_selection">
-                            <option value="ppo" selected>Proximal Policy Optimization (PPO)</option>
-                        </select>
-                        <div class="form-text">Select the reinforcement learning algorithm</div>
+                        <label for="tradeInterval" class="form-label">Trade Interval</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="tradeInterval" name="trade_interval" min="1" step="1" value="5">
+                            <span class="input-group-text">minutes</span>
+                        </div>
+                        <div class="form-text">Time between trading decisions</div>
                     </div>
                     
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary" id="save-settings-btn">
-                            <i class="fas fa-save me-2"></i>Save Settings
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Save Trading Parameters
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">API Configuration</h5>
+                <form id="api-config-form">
+                    <div class="mb-3">
+                        <label for="apiKey" class="form-label">API Key</label>
+                        <input type="text" class="form-control" id="apiKey" name="api_key" value="e9WneuGa4mnfivi96myjEeCF34R9DZZ7W1e3hGX7Dd5tfqXotyMpmV3ICoZ7V1KF">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="secretKey" class="form-label">Secret Key</label>
+                        <input type="password" class="form-control" id="secretKey" name="secret_key" value="••••••••••••••••••••••••••••••••••••••••••••••••">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="baseUrl" class="form-label">API Base URL</label>
+                        <input type="text" class="form-control" id="baseUrl" name="base_url" value="https://mock-api.roostoo.com">
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Save API Configuration
                         </button>
                     </div>
                 </form>
@@ -59,98 +82,110 @@
         </div>
     </div>
     
-    <div class="col-lg-6">
-        <div class="card trading-card">
-            <div class="card-header">
-                <h5 class="mb-0">Advanced Settings</h5>
-            </div>
+    <div class="col-md-6">
+        <div class="card">
             <div class="card-body">
-                <div class="mb-3">
-                    <label for="trading-frequency" class="form-label">Trading Frequency: <span id="frequency-value">Every 5 minutes</span></label>
-                    <select class="form-select" id="trading-frequency" name="trading_frequency">
-                        <option value="1">Every 1 minute</option>
-                        <option value="5" selected>Every 5 minutes</option>
-                        <option value="15">Every 15 minutes</option>
-                        <option value="30">Every 30 minutes</option>
-                        <option value="60">Every hour</option>
-                    </select>
-                    <div class="form-text">How often the bot should check for trading opportunities</div>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="stop-loss" class="form-label">Stop Loss: <span id="stop-loss-value">5%</span></label>
-                    <input type="range" class="form-range" id="stop-loss" name="stop_loss" min="1" max="20" step="1" value="5">
-                    <div class="form-text">Percentage below purchase price to trigger stop loss</div>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="reinvest-profits" checked>
-                        <label class="form-check-label" for="reinvest-profits">Reinvest Profits</label>
+                <h5 class="card-title">Model Configuration</h5>
+                <form id="model-config-form">
+                    <div class="mb-3">
+                        <label for="modelPath" class="form-label">Model Path</label>
+                        <input type="text" class="form-control" id="modelPath" name="model_path" value="ppo_trading_bot">
+                        <div class="form-text">Path to the trained RL model</div>
                     </div>
-                    <div class="form-text">Automatically reinvest profits into new trades</div>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="api-keys" class="form-label">API Configuration</label>
-                    <div class="input-group mb-2">
-                        <span class="input-group-text">API Key</span>
-                        <input type="text" class="form-control" id="api-key" placeholder="Using environment variable" disabled>
+                    
+                    <div class="mb-3">
+                        <label for="windowSize" class="form-label">Observation Window Size</label>
+                        <input type="number" class="form-control" id="windowSize" name="window_size" min="1" step="1" value="12">
+                        <div class="form-text">Number of time periods to look back for state construction</div>
                     </div>
-                    <div class="input-group">
-                        <span class="input-group-text">Secret Key</span>
-                        <input type="password" class="form-control" id="secret-key" placeholder="●●●●●●●●●●●●●●●●" disabled>
-                    </div>
-                    <div class="form-text">API keys are configured through environment variables</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card trading-card">
-            <div class="card-header">
-                <h5 class="mb-0">Model Training</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="training-period" class="form-label">Historical Data Period</label>
-                            <select class="form-select" id="training-period">
-                                <option value="3mo">3 Months</option>
-                                <option value="6mo">6 Months</option>
-                                <option value="1y" selected>1 Year</option>
-                                <option value="2y">2 Years</option>
-                            </select>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Technical Indicators</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="useSMA" checked>
+                            <label class="form-check-label" for="useSMA">
+                                Simple Moving Average (SMA)
+                            </label>
                         </div>
-                        
-                        <div class="mb-3">
-                            <label for="training-steps" class="form-label">Training Steps: <span id="steps-value">100,000</span></label>
-                            <input type="range" class="form-range" id="training-steps" min="1" max="5" step="1" value="3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="useRSI" checked>
+                            <label class="form-check-label" for="useRSI">
+                                Relative Strength Index (RSI)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="useMACD" checked>
+                            <label class="form-check-label" for="useMACD">
+                                Moving Average Convergence Divergence (MACD)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="useBollinger" checked>
+                            <label class="form-check-label" for="useBollinger">
+                                Bollinger Bands
+                            </label>
                         </div>
                     </div>
                     
-                    <div class="col-md-6">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Training a new model will improve performance based on recent market data but may take several minutes.
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Save Model Configuration
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">Train New Model</h5>
+                <form id="train-model-form">
+                    <div class="mb-3">
+                        <label for="trainSymbol" class="form-label">Symbol</label>
+                        <input type="text" class="form-control" id="trainSymbol" name="symbol" value="BTC-USD">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="trainPeriod" class="form-label">Training Data Period</label>
+                        <select class="form-select" id="trainPeriod" name="period">
+                            <option value="1mo">1 Month</option>
+                            <option value="3mo" selected>3 Months</option>
+                            <option value="6mo">6 Months</option>
+                            <option value="1y">1 Year</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="trainInterval" class="form-label">Data Interval</label>
+                        <select class="form-select" id="trainInterval" name="interval">
+                            <option value="1m">1 Minute</option>
+                            <option value="5m" selected>5 Minutes</option>
+                            <option value="15m">15 Minutes</option>
+                            <option value="1h">1 Hour</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="trainTimesteps" class="form-label">Training Timesteps</label>
+                        <input type="number" class="form-control" id="trainTimesteps" name="timesteps" min="10000" step="10000" value="100000">
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-play me-1"></i>Start Training
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="mt-3" id="training-status" style="display: none;">
+                    <div class="alert alert-info">
+                        <h5>Training in Progress</h5>
+                        <div class="progress mt-2">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" id="training-progress"></div>
                         </div>
-                        
-                        <div class="d-grid">
-                            <button class="btn btn-primary" id="train-model-btn">
-                                <i class="fas fa-brain me-2"></i>Train New Model
-                            </button>
-                        </div>
+                        <p class="mt-2" id="training-message">Initializing training...</p>
                     </div>
                 </div>
-                
-                <div class="progress mt-3 d-none" id="training-progress-container">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="training-progress" style="width: 0%"></div>
-                </div>
-                <p class="text-muted mt-2 d-none" id="training-status">Training in progress...</p>
             </div>
         </div>
     </div>
@@ -158,9 +193,170 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/settings.js"></script>
-{% endblock %}
-
-{% block last_updated %}
-{{ now.strftime('%Y-%m-%d') }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle trading parameters form submission
+        document.getElementById('trading-params-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const params = {
+                pair: formData.get('pair'),
+                max_position_size: parseFloat(formData.get('max_position_size')),
+                risk_percentage: parseFloat(formData.get('risk_percentage')),
+                trade_interval: parseInt(formData.get('trade_interval')) * 60 // Convert to seconds
+            };
+            
+            // Save settings
+            localStorage.setItem('trading_params', JSON.stringify(params));
+            
+            showAlert('success', 'Trading parameters saved successfully!');
+        });
+        
+        // Handle API configuration form submission
+        document.getElementById('api-config-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const config = {
+                api_key: formData.get('api_key'),
+                secret_key: '••••••••••••••••••••••••••••••••••••••••••••••••', // Don't store actual secret in localStorage
+                base_url: formData.get('base_url')
+            };
+            
+            // Save settings
+            localStorage.setItem('api_config', JSON.stringify(config));
+            
+            showAlert('success', 'API configuration saved successfully!');
+        });
+        
+        // Handle model configuration form submission
+        document.getElementById('model-config-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const config = {
+                model_path: formData.get('model_path'),
+                window_size: parseInt(formData.get('window_size')),
+                use_sma: document.getElementById('useSMA').checked,
+                use_rsi: document.getElementById('useRSI').checked,
+                use_macd: document.getElementById('useMACD').checked,
+                use_bollinger: document.getElementById('useBollinger').checked
+            };
+            
+            // Save settings
+            localStorage.setItem('model_config', JSON.stringify(config));
+            
+            showAlert('success', 'Model configuration saved successfully!');
+        });
+        
+        // Handle train model form submission
+        document.getElementById('train-model-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show training status
+            document.getElementById('training-status').style.display = 'block';
+            document.getElementById('training-message').textContent = 'Initializing training...';
+            document.getElementById('training-progress').style.width = '0%';
+            
+            // In a real implementation, we would call an API endpoint to start training
+            // For this demo, we'll simulate the training process
+            
+            // Update progress periodically
+            let progress = 0;
+            const progressInterval = setInterval(function() {
+                progress += 5;
+                document.getElementById('training-progress').style.width = `${progress}%`;
+                document.getElementById('training-message').textContent = `Training in progress... ${progress}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    document.getElementById('training-message').textContent = 'Training completed successfully!';
+                    setTimeout(function() {
+                        document.getElementById('training-status').style.display = 'none';
+                        showAlert('success', 'Model training completed successfully!');
+                    }, 2000);
+                }
+            }, 1000);
+        });
+        
+        // Function to show an alert
+        function showAlert(type, message) {
+            const alertHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            const alertContainer = document.createElement('div');
+            alertContainer.innerHTML = alertHTML;
+            document.querySelector('.container').insertBefore(alertContainer.firstChild, document.querySelector('h1').nextSibling);
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(function() {
+                const alerts = document.querySelectorAll('.alert');
+                if (alerts.length > 0) {
+                    alerts[0].classList.remove('show');
+                    setTimeout(function() {
+                        if (alerts[0].parentNode) {
+                            alerts[0].parentNode.removeChild(alerts[0]);
+                        }
+                    }, 150);
+                }
+            }, 5000);
+        }
+        
+        // Load saved settings on page load
+        function loadSavedSettings() {
+            // Load trading parameters
+            const tradingParams = JSON.parse(localStorage.getItem('trading_params') || '{}');
+            if (tradingParams.pair) {
+                document.getElementById('tradingPair').value = tradingParams.pair;
+            }
+            if (tradingParams.max_position_size) {
+                document.getElementById('maxPositionSize').value = tradingParams.max_position_size;
+            }
+            if (tradingParams.risk_percentage) {
+                document.getElementById('riskPercentage').value = tradingParams.risk_percentage;
+            }
+            if (tradingParams.trade_interval) {
+                document.getElementById('tradeInterval').value = tradingParams.trade_interval / 60; // Convert from seconds to minutes
+            }
+            
+            // Load API configuration
+            const apiConfig = JSON.parse(localStorage.getItem('api_config') || '{}');
+            if (apiConfig.api_key) {
+                document.getElementById('apiKey').value = apiConfig.api_key;
+            }
+            if (apiConfig.base_url) {
+                document.getElementById('baseUrl').value = apiConfig.base_url;
+            }
+            
+            // Load model configuration
+            const modelConfig = JSON.parse(localStorage.getItem('model_config') || '{}');
+            if (modelConfig.model_path) {
+                document.getElementById('modelPath').value = modelConfig.model_path;
+            }
+            if (modelConfig.window_size) {
+                document.getElementById('windowSize').value = modelConfig.window_size;
+            }
+            if (modelConfig.use_sma !== undefined) {
+                document.getElementById('useSMA').checked = modelConfig.use_sma;
+            }
+            if (modelConfig.use_rsi !== undefined) {
+                document.getElementById('useRSI').checked = modelConfig.use_rsi;
+            }
+            if (modelConfig.use_macd !== undefined) {
+                document.getElementById('useMACD').checked = modelConfig.use_macd;
+            }
+            if (modelConfig.use_bollinger !== undefined) {
+                document.getElementById('useBollinger').checked = modelConfig.use_bollinger;
+            }
+        }
+        
+        // Load saved settings
+        loadSavedSettings();
+    });
+</script>
 {% endblock %}

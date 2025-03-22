@@ -1,28 +1,27 @@
 import requests
+import time
 import hmac
 import hashlib
-import time
 import logging
-import json
+from config import API_KEY, SECRET_KEY, BASE_URL
 
 logger = logging.getLogger(__name__)
 
 class RoostooClient:
-    """
-    Client for interacting with the Roostoo Mock Exchange API.
-    """
-    def __init__(self, api_key, secret_key, base_url="https://mock-api.roostoo.com"):
+    """Client for interacting with the Roostoo mock exchange API"""
+    
+    def __init__(self, api_key=API_KEY, secret_key=SECRET_KEY, base_url=BASE_URL):
         self.api_key = api_key
         self.secret_key = secret_key
         self.base_url = base_url
-        logger.info("Initialized Roostoo API client")
+        logger.info(f"Initialized Roostoo API client with base URL: {base_url}")
     
     def _generate_signature(self, params):
-        """Generate HMAC SHA256 signature for API authentication"""
-        # Sort parameters by key and create query string
-        query_string = '&'.join([f"{k}={params[k]}" for k in sorted(params.keys())])
+        """Generate HMAC-SHA256 signature for authentication"""
+        # Sort parameters alphabetically and create query string
+        query_string = '&'.join([f"{key}={value}" for key, value in sorted(params.items())])
         
-        # Create signature using HMAC SHA256
+        # Create HMAC-SHA256 signature
         signature = hmac.new(
             self.secret_key.encode(),
             query_string.encode(),
@@ -32,240 +31,206 @@ class RoostooClient:
         return signature
     
     def get_server_time(self):
-        """Get the server time from the Roostoo API"""
+        """Fetch server time"""
+        endpoint = f"{self.base_url}/v3/serverTime"
+        
         try:
-            response = requests.get(f"{self.base_url}/v3/serverTime")
-            return response.json()
+            response = requests.get(endpoint)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"Error fetching server time: {response.status_code} - {response.text}")
+                return {"error": f"HTTP {response.status_code}: {response.text}"}
         except Exception as e:
-            logger.error(f"Error fetching server time: {str(e)}")
-            return {"Success": False, "ErrMsg": str(e)}
+            logger.error(f"Exception in get_server_time: {str(e)}")
+            return {"error": str(e)}
     
     def get_exchange_info(self):
-        """Get exchange information including trading pairs and rules"""
+        """Fetch exchange information"""
+        endpoint = f"{self.base_url}/v3/exchangeInfo"
+        
         try:
-            response = requests.get(f"{self.base_url}/v3/exchangeInfo")
-            return response.json()
+            response = requests.get(endpoint)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"Error fetching exchange info: {response.status_code} - {response.text}")
+                return {"error": f"HTTP {response.status_code}: {response.text}"}
         except Exception as e:
-            logger.error(f"Error fetching exchange info: {str(e)}")
-            return {"Success": False, "ErrMsg": str(e)}
+            logger.error(f"Exception in get_exchange_info: {str(e)}")
+            return {"error": str(e)}
     
     def get_ticker(self, pair=None):
-        """
-        Get market ticker data for a specific trading pair or all pairs.
+        """Fetch market ticker data"""
+        endpoint = f"{self.base_url}/v3/ticker"
+        timestamp = int(time.time() * 1000)
         
-        Args:
-            pair (str, optional): Trading pair (e.g., "BTC/USD"). If None, returns all tickers.
+        params = {"timestamp": timestamp}
+        if pair:
+            params["pair"] = pair
         
-        Returns:
-            dict: Ticker data
-        """
         try:
-            # Prepare parameters
-            params = {"timestamp": int(time.time() * 1000)}
-            if pair:
-                params["pair"] = pair
-            
-            # Make the request
-            response = requests.get(f"{self.base_url}/v3/ticker", params=params)
-            return response.json()
+            response = requests.get(endpoint, params=params)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"Error fetching ticker: {response.status_code} - {response.text}")
+                return {"error": f"HTTP {response.status_code}: {response.text}"}
         except Exception as e:
-            logger.error(f"Error fetching ticker data: {str(e)}")
-            return {"Success": False, "ErrMsg": str(e)}
+            logger.error(f"Exception in get_ticker: {str(e)}")
+            return {"error": str(e)}
     
     def get_balance(self):
-        """
-        Get current wallet balance.
+        """Fetch wallet balance"""
+        endpoint = f"{self.base_url}/v3/balance"
+        timestamp = int(time.time() * 1000)
         
-        Returns:
-            dict: Wallet balance data
-        """
+        params = {"timestamp": timestamp}
+        signature = self._generate_signature(params)
+        
+        headers = {
+            "RST-API-KEY": self.api_key,
+            "MSG-SIGNATURE": signature,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
         try:
-            # Prepare parameters
-            params = {"timestamp": int(time.time() * 1000)}
-            
-            # Generate signature
-            signature = self._generate_signature(params)
-            
-            # Prepare headers
-            headers = {
-                "RST-API-KEY": self.api_key,
-                "MSG-SIGNATURE": signature,
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-            
-            # Make the request
-            response = requests.get(
-                f"{self.base_url}/v3/balance",
-                params=params,
-                headers=headers
-            )
-            
-            return response.json()
-        except Exception as e:
-            logger.error(f"Error fetching balance: {str(e)}")
-            return {"Success": False, "ErrMsg": str(e)}
-    
-    def place_order(self, pair, side, quantity, price=None):
-        """
-        Place a trading order on the exchange.
-        
-        Args:
-            pair (str): Trading pair (e.g., "BTC/USD")
-            side (str): Order side ("BUY" or "SELL")
-            quantity (float): Order quantity
-            price (float, optional): Limit price. If None, places a market order.
-        
-        Returns:
-            dict: Order response data
-        """
-        try:
-            # Prepare parameters
-            params = {
-                "pair": pair,
-                "side": side,
-                "quantity": quantity,
-                "timestamp": int(time.time() * 1000)
-            }
-            
-            # Set order type
-            if price is None:
-                params["type"] = "MARKET"
+            response = requests.get(endpoint, params=params, headers=headers)
+            if response.status_code == 200:
+                return response.json()
             else:
-                params["type"] = "LIMIT"
-                params["price"] = price
-            
-            # Generate signature
-            signature = self._generate_signature(params)
-            
-            # Prepare headers
-            headers = {
-                "RST-API-KEY": self.api_key,
-                "MSG-SIGNATURE": signature,
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-            
-            # Make the request
-            response = requests.post(
-                f"{self.base_url}/v3/place_order",
-                data=params,
-                headers=headers
-            )
-            
-            return response.json()
+                logger.error(f"Error fetching balance: {response.status_code} - {response.text}")
+                return {"error": f"HTTP {response.status_code}: {response.text}"}
         except Exception as e:
-            logger.error(f"Error placing order: {str(e)}")
-            return {"Success": False, "ErrMsg": str(e)}
+            logger.error(f"Exception in get_balance: {str(e)}")
+            return {"error": str(e)}
     
-    def cancel_order(self, pair):
-        """
-        Cancel orders for a specific trading pair.
+    def place_order(self, pair="BTC/USD", side="BUY", quantity=0.01, price=None):
+        """Place an order on the exchange"""
+        endpoint = f"{self.base_url}/v3/place_order"
+        timestamp = int(time.time() * 1000)
         
-        Args:
-            pair (str): Trading pair (e.g., "BTC/USD")
+        # Prepare parameters
+        params = {
+            "pair": pair,
+            "side": side,
+            "quantity": quantity,
+            "timestamp": timestamp
+        }
         
-        Returns:
-            dict: Cancellation response data
-        """
+        # If price is provided, it's a LIMIT order, otherwise MARKET
+        if price is not None:
+            params["type"] = "LIMIT"
+            params["price"] = price
+        else:
+            params["type"] = "MARKET"
+        
+        # Generate signature
+        signature = self._generate_signature(params)
+        
+        headers = {
+            "RST-API-KEY": self.api_key,
+            "MSG-SIGNATURE": signature,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
         try:
-            # Prepare parameters
-            params = {
-                "pair": pair,
-                "timestamp": int(time.time() * 1000)
-            }
-            
-            # Generate signature
-            signature = self._generate_signature(params)
-            
-            # Prepare headers
-            headers = {
-                "RST-API-KEY": self.api_key,
-                "MSG-SIGNATURE": signature,
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-            
-            # Make the request
-            response = requests.post(
-                f"{self.base_url}/v3/cancel_order",
-                data=params,
-                headers=headers
-            )
-            
-            return response.json()
+            response = requests.post(endpoint, data=params, headers=headers)
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("Success", False):
+                    logger.info(f"Order placed successfully: {side} {quantity} {pair}")
+                else:
+                    logger.error(f"Error placing order: {result.get('ErrMsg', 'Unknown error')}")
+                return result
+            else:
+                logger.error(f"Error placing order: {response.status_code} - {response.text}")
+                return {"Success": False, "ErrMsg": f"HTTP {response.status_code}: {response.text}"}
         except Exception as e:
-            logger.error(f"Error cancelling order: {str(e)}")
+            logger.error(f"Exception in place_order: {str(e)}")
             return {"Success": False, "ErrMsg": str(e)}
     
     def query_order(self, order_id=None, pair=None):
-        """
-        Query orders by ID or pair.
+        """Query order status"""
+        endpoint = f"{self.base_url}/v3/query_order"
+        timestamp = int(time.time() * 1000)
         
-        Args:
-            order_id (str, optional): Order ID to query
-            pair (str, optional): Trading pair to query orders for
+        params = {"timestamp": timestamp}
         
-        Returns:
-            dict: Order data
-        """
+        if order_id:
+            params["order_id"] = order_id
+        if pair:
+            params["pair"] = pair
+        
+        signature = self._generate_signature(params)
+        
+        headers = {
+            "RST-API-KEY": self.api_key,
+            "MSG-SIGNATURE": signature,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
         try:
-            # Prepare parameters
-            params = {"timestamp": int(time.time() * 1000)}
-            
-            if order_id:
-                params["order_id"] = order_id
-            elif pair:
-                params["pair"] = pair
-            
-            # Generate signature
-            signature = self._generate_signature(params)
-            
-            # Prepare headers
-            headers = {
-                "RST-API-KEY": self.api_key,
-                "MSG-SIGNATURE": signature,
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-            
-            # Make the request
-            response = requests.post(
-                f"{self.base_url}/v3/query_order",
-                data=params,
-                headers=headers
-            )
-            
-            return response.json()
+            response = requests.post(endpoint, data=params, headers=headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"Error querying order: {response.status_code} - {response.text}")
+                return {"error": f"HTTP {response.status_code}: {response.text}"}
         except Exception as e:
-            logger.error(f"Error querying order: {str(e)}")
-            return {"Success": False, "ErrMsg": str(e)}
+            logger.error(f"Exception in query_order: {str(e)}")
+            return {"error": str(e)}
+    
+    def cancel_order(self, pair="BTC/USD"):
+        """Cancel orders for a trading pair"""
+        endpoint = f"{self.base_url}/v3/cancel_order"
+        timestamp = int(time.time() * 1000)
+        
+        params = {
+            "timestamp": timestamp,
+            "pair": pair
+        }
+        
+        signature = self._generate_signature(params)
+        
+        headers = {
+            "RST-API-KEY": self.api_key,
+            "MSG-SIGNATURE": signature,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
+        try:
+            response = requests.post(endpoint, data=params, headers=headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"Error canceling order: {response.status_code} - {response.text}")
+                return {"error": f"HTTP {response.status_code}: {response.text}"}
+        except Exception as e:
+            logger.error(f"Exception in cancel_order: {str(e)}")
+            return {"error": str(e)}
     
     def pending_count(self):
-        """
-        Get count of pending orders.
+        """Get count of pending orders"""
+        endpoint = f"{self.base_url}/v3/pending_count"
+        timestamp = int(time.time() * 1000)
         
-        Returns:
-            dict: Pending order count data
-        """
+        params = {"timestamp": timestamp}
+        signature = self._generate_signature(params)
+        
+        headers = {
+            "RST-API-KEY": self.api_key,
+            "MSG-SIGNATURE": signature,
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+        
         try:
-            # Prepare parameters
-            params = {"timestamp": int(time.time() * 1000)}
-            
-            # Generate signature
-            signature = self._generate_signature(params)
-            
-            # Prepare headers
-            headers = {
-                "RST-API-KEY": self.api_key,
-                "MSG-SIGNATURE": signature,
-                "Content-Type": "application/x-www-form-urlencoded"
-            }
-            
-            # Make the request
-            response = requests.get(
-                f"{self.base_url}/v3/pending_count",
-                params=params,
-                headers=headers
-            )
-            
-            return response.json()
+            response = requests.get(endpoint, params=params, headers=headers)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"Error fetching pending count: {response.status_code} - {response.text}")
+                return {"error": f"HTTP {response.status_code}: {response.text}"}
         except Exception as e:
-            logger.error(f"Error fetching pending count: {str(e)}")
-            return {"Success": False, "ErrMsg": str(e)}
+            logger.error(f"Exception in pending_count: {str(e)}")
+            return {"error": str(e)}

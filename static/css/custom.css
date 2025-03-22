@@ -1,0 +1,118 @@
+/* Custom CSS for the Trading Bot UI */
+
+/* General Styles */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.container {
+    flex: 1;
+}
+
+.footer {
+    margin-top: auto;
+}
+
+/* Dashboard Styles */
+.price-display {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 0;
+}
+
+.market-stats, .balance-item {
+    margin-top: 10px;
+}
+
+.stat-label, .balance-label {
+    font-weight: 500;
+    color: var(--bs-secondary);
+}
+
+.total-value, .total-portfolio-value h3 {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--bs-info);
+}
+
+/* Activity Log Styles */
+.activity-log {
+    height: 220px;
+    overflow-y: auto;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: 5px;
+    font-family: monospace;
+}
+
+.log-entry {
+    margin-bottom: 5px;
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.log-time {
+    color: var(--bs-info);
+    margin-right: 10px;
+}
+
+.log-error .log-message {
+    color: var(--bs-danger);
+}
+
+/* Chart Styles */
+.chart-container {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    padding: 10px;
+}
+
+/* Card Enhancements */
+.card {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.card-title {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+/* Button Styles */
+.btn-primary {
+    background-color: var(--bs-primary);
+}
+
+.btn-success {
+    background-color: var(--bs-success);
+}
+
+.btn-danger {
+    background-color: var(--bs-danger);
+}
+
+/* Bot Status Badge */
+.bot-status {
+    display: flex;
+    align-items: center;
+}
+
+#bot-status-badge {
+    font-size: 0.9rem;
+    padding: 6px 10px;
+}
+
+/* Settings Page */
+.form-text {
+    font-size: 0.8rem;
+    color: var(--bs-secondary);
+}
+
+/* Dashboard Table Styles */
+.table-responsive {
+    border-radius: 5px;
+    overflow: hidden;
+}

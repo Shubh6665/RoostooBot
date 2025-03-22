@@ -1,86 +1,221 @@
-{% extends "layout.html" %}
+{% extends 'base.html' %}
+
+{% block title %}RL Crypto Trading Bot{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card bg-dark text-white">
-            <div class="card-body">
-                <h2 class="card-title">AI-Powered Crypto Trading Bot</h2>
-                <p class="card-text">
-                    Welcome to your automated cryptocurrency trading assistant. This bot uses deep reinforcement learning 
-                    (specifically Proximal Policy Optimization) to make intelligent trading decisions.
-                </p>
-                <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
-                <a href="/settings" class="btn btn-outline-secondary ms-2">Configure Settings</a>
+<div class="row align-items-center">
+    <div class="col-md-6">
+        <div class="p-4">
+            <h1 class="display-4">AI-Powered Crypto Trading</h1>
+            <p class="lead">
+                Automated cryptocurrency trading using Deep Reinforcement Learning and the Roostoo exchange.
+            </p>
+            <p>
+                This trading bot uses Proximal Policy Optimization (PPO) to learn optimal trading strategies for cryptocurrencies, maximizing returns while minimizing risk.
+            </p>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start mt-4">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary me-md-2">
+                    <i class="fas fa-chart-line me-1"></i>View Dashboard
+                </a>
+                <a href="{{ url_for('settings') }}" class="btn btn-secondary">
+                    <i class="fas fa-cog me-1"></i>Configure Bot
+                </a>
             </div>
         </div>
     </div>
-</div>
-
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card trading-card h-100">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-brain me-2"></i>
-                    Reinforcement Learning
-                </h5>
-                <p class="card-text">
-                    The bot uses Proximal Policy Optimization (PPO), a state-of-the-art reinforcement learning 
-                    algorithm that learns optimal trading strategies through direct market interaction.
-                </p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card trading-card h-100">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-chart-line me-2"></i>
-                    Real-time Trading
-                </h5>
-                <p class="card-text">
-                    Connect to the Roostoo mock exchange API to execute trades automatically. The bot analyzes 
-                    market data and executes optimal trades based on its trained model.
-                </p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card trading-card h-100">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-shield-alt me-2"></i>
-                    Risk Management
-                </h5>
-                <p class="card-text">
-                    Built-in risk management features ensure your assets are protected. Configure risk tolerance 
-                    levels and the bot will adapt its trading strategy accordingly.
-                </p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row">
-    <div class="col-12">
+    <div class="col-md-6">
         <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Getting Started</h5>
-            </div>
             <div class="card-body">
-                <ol class="list-group list-group-numbered mb-0">
-                    <li class="list-group-item">Go to the <strong>Settings</strong> page to configure your trading preferences</li>
-                    <li class="list-group-item">Select your preferred trading pair (e.g., BTC/USD)</li>
-                    <li class="list-group-item">Set your risk level (percentage of portfolio to risk per trade)</li>
-                    <li class="list-group-item">Start the bot and monitor its performance on the <strong>Dashboard</strong></li>
-                </ol>
+                <h5 class="card-title">Current Market Overview</h5>
+                <div id="market-data-container">
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">Bot Performance</h5>
+                <div id="wallet-balance-container">
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-brain me-2"></i>Reinforcement Learning</h5>
+                <p class="card-text">
+                    The bot uses PPO (Proximal Policy Optimization), a state-of-the-art reinforcement learning algorithm that learns by interacting with the market.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-chart-bar me-2"></i>Technical Indicators</h5>
+                <p class="card-text">
+                    Incorporates various technical indicators like SMA, RSI, MACD, and Bollinger Bands to make informed trading decisions.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-shield-alt me-2"></i>Risk Management</h5>
+                <p class="card-text">
+                    Built-in risk management ensures the bot never risks more than a configurable percentage of your portfolio on any single trade.
+                </p>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
-{% block last_updated %}
-{{ now.strftime('%Y-%m-%d') }}
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Function to fetch and display market data
+        function fetchMarketData() {
+            fetch('/api/market-data?pair=BTC/USD')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const marketData = data.data.Data["BTC/USD"];
+                    const htmlContent = `
+                        <div class="row">
+                            <div class="col-6">
+                                <h2 class="price-display">$${marketData.LastPrice.toFixed(2)}</h2>
+                                <span class="badge ${marketData.Change >= 0 ? 'bg-success' : 'bg-danger'}">
+                                    ${(marketData.Change * 100).toFixed(2)}%
+                                </span>
+                            </div>
+                            <div class="col-6">
+                                <div class="market-stats">
+                                    <div class="stat-item">
+                                        <span class="stat-label">Bid:</span>
+                                        <span class="stat-value">$${marketData.MaxBid.toFixed(2)}</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Ask:</span>
+                                        <span class="stat-value">$${marketData.MinAsk.toFixed(2)}</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">24h Volume:</span>
+                                        <span class="stat-value">${marketData.CoinTradeValue.toFixed(2)} BTC</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('market-data-container').innerHTML = htmlContent;
+                } else {
+                    document.getElementById('market-data-container').innerHTML = `
+                        <div class="alert alert-danger">
+                            Failed to load market data: ${data.error || 'Unknown error'}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                document.getElementById('market-data-container').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error: ${error}
+                    </div>
+                `;
+            });
+        }
+
+        // Function to fetch and display wallet balance
+        function fetchWalletBalance() {
+            fetch('/api/wallet-balance')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    let walletData;
+                    if (data.data.Wallet) {
+                        walletData = data.data.Wallet;
+                    } else if (data.data.SpotWallet) {
+                        walletData = data.data.SpotWallet;
+                    } else {
+                        throw new Error('Unexpected wallet data format');
+                    }
+
+                    const usdBalance = walletData.USD?.Free || 0;
+                    const btcBalance = walletData.BTC?.Free || 0;
+                    
+                    fetch('/api/market-data?pair=BTC/USD')
+                    .then(response => response.json())
+                    .then(marketData => {
+                        if (marketData.success) {
+                            const btcPrice = marketData.data.Data["BTC/USD"].LastPrice;
+                            const totalValue = usdBalance + btcBalance * btcPrice;
+                            
+                            const htmlContent = `
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h3 class="total-value">Total: $${totalValue.toFixed(2)}</h3>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="balance-item">
+                                            <span class="balance-label">USD:</span>
+                                            <span class="balance-value">$${usdBalance.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="balance-item">
+                                            <span class="balance-label">BTC:</span>
+                                            <span class="balance-value">${btcBalance.toFixed(8)} ($${(btcBalance * btcPrice).toFixed(2)})</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            document.getElementById('wallet-balance-container').innerHTML = htmlContent;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching BTC price:', error);
+                    });
+                } else {
+                    document.getElementById('wallet-balance-container').innerHTML = `
+                        <div class="alert alert-danger">
+                            Failed to load wallet data: ${data.error || 'Unknown error'}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                document.getElementById('wallet-balance-container').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error: ${error}
+                    </div>
+                `;
+            });
+        }
+
+        // Initial data load
+        fetchMarketData();
+        fetchWalletBalance();
+
+        // Refresh data every 60 seconds
+        setInterval(fetchMarketData, 60000);
+        setInterval(fetchWalletBalance, 60000);
+    });
+</script>
 {% endblock %}
