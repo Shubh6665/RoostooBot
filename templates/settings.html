@@ -1,0 +1,166 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-dark">
+            <div class="card-body">
+                <h3 class="card-title">Trading Bot Settings</h3>
+                <p class="text-muted">Configure the behavior of your automated trading system</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card trading-card">
+            <div class="card-header">
+                <h5 class="mb-0">Trading Configuration</h5>
+            </div>
+            <div class="card-body">
+                <form id="settings-form">
+                    <!-- Trading Pair -->
+                    <div class="mb-3">
+                        <label for="trading-pair" class="form-label">Trading Pair</label>
+                        <select class="form-select" id="trading-pair" name="trading_pair">
+                            <option value="BTC/USD" selected>BTC/USD</option>
+                            <option value="ETH/USD">ETH/USD</option>
+                            <option value="BNB/USD">BNB/USD</option>
+                            <option value="XRP/USD">XRP/USD</option>
+                            <option value="ADA/USD">ADA/USD</option>
+                        </select>
+                        <div class="form-text">Select the cryptocurrency pair you want to trade</div>
+                    </div>
+                    
+                    <!-- Risk Level -->
+                    <div class="mb-3">
+                        <label for="risk-level" class="form-label">Risk Level: <span id="risk-value">2%</span></label>
+                        <input type="range" class="form-range" id="risk-level" name="risk_level" min="0.5" max="10" step="0.5" value="2">
+                        <div class="form-text">Percentage of portfolio to risk per trade</div>
+                    </div>
+                    
+                    <!-- Model Selection -->
+                    <div class="mb-3">
+                        <label for="model-selection" class="form-label">Trading Model</label>
+                        <select class="form-select" id="model-selection" name="model_selection">
+                            <option value="ppo" selected>Proximal Policy Optimization (PPO)</option>
+                        </select>
+                        <div class="form-text">Select the reinforcement learning algorithm</div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" id="save-settings-btn">
+                            <i class="fas fa-save me-2"></i>Save Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card trading-card">
+            <div class="card-header">
+                <h5 class="mb-0">Advanced Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="trading-frequency" class="form-label">Trading Frequency: <span id="frequency-value">Every 5 minutes</span></label>
+                    <select class="form-select" id="trading-frequency" name="trading_frequency">
+                        <option value="1">Every 1 minute</option>
+                        <option value="5" selected>Every 5 minutes</option>
+                        <option value="15">Every 15 minutes</option>
+                        <option value="30">Every 30 minutes</option>
+                        <option value="60">Every hour</option>
+                    </select>
+                    <div class="form-text">How often the bot should check for trading opportunities</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="stop-loss" class="form-label">Stop Loss: <span id="stop-loss-value">5%</span></label>
+                    <input type="range" class="form-range" id="stop-loss" name="stop_loss" min="1" max="20" step="1" value="5">
+                    <div class="form-text">Percentage below purchase price to trigger stop loss</div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="reinvest-profits" checked>
+                        <label class="form-check-label" for="reinvest-profits">Reinvest Profits</label>
+                    </div>
+                    <div class="form-text">Automatically reinvest profits into new trades</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="api-keys" class="form-label">API Configuration</label>
+                    <div class="input-group mb-2">
+                        <span class="input-group-text">API Key</span>
+                        <input type="text" class="form-control" id="api-key" placeholder="Using environment variable" disabled>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-text">Secret Key</span>
+                        <input type="password" class="form-control" id="secret-key" placeholder="●●●●●●●●●●●●●●●●" disabled>
+                    </div>
+                    <div class="form-text">API keys are configured through environment variables</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card trading-card">
+            <div class="card-header">
+                <h5 class="mb-0">Model Training</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="training-period" class="form-label">Historical Data Period</label>
+                            <select class="form-select" id="training-period">
+                                <option value="3mo">3 Months</option>
+                                <option value="6mo">6 Months</option>
+                                <option value="1y" selected>1 Year</option>
+                                <option value="2y">2 Years</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="training-steps" class="form-label">Training Steps: <span id="steps-value">100,000</span></label>
+                            <input type="range" class="form-range" id="training-steps" min="1" max="5" step="1" value="3">
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Training a new model will improve performance based on recent market data but may take several minutes.
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button class="btn btn-primary" id="train-model-btn">
+                                <i class="fas fa-brain me-2"></i>Train New Model
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress mt-3 d-none" id="training-progress-container">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="training-progress" style="width: 0%"></div>
+                </div>
+                <p class="text-muted mt-2 d-none" id="training-status">Training in progress...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/settings.js"></script>
+{% endblock %}
+
+{% block last_updated %}
+{{ now.strftime('%Y-%m-%d') }}
+{% endblock %}

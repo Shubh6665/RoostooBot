@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-dark text-white">
+            <div class="card-body">
+                <h2 class="card-title">AI-Powered Crypto Trading Bot</h2>
+                <p class="card-text">
+                    Welcome to your automated cryptocurrency trading assistant. This bot uses deep reinforcement learning 
+                    (specifically Proximal Policy Optimization) to make intelligent trading decisions.
+                </p>
+                <a href="/dashboard" class="btn btn-primary">Go to Dashboard</a>
+                <a href="/settings" class="btn btn-outline-secondary ms-2">Configure Settings</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card trading-card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-brain me-2"></i>
+                    Reinforcement Learning
+                </h5>
+                <p class="card-text">
+                    The bot uses Proximal Policy Optimization (PPO), a state-of-the-art reinforcement learning 
+                    algorithm that learns optimal trading strategies through direct market interaction.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card trading-card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Real-time Trading
+                </h5>
+                <p class="card-text">
+                    Connect to the Roostoo mock exchange API to execute trades automatically. The bot analyzes 
+                    market data and executes optimal trades based on its trained model.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card trading-card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Risk Management
+                </h5>
+                <p class="card-text">
+                    Built-in risk management features ensure your assets are protected. Configure risk tolerance 
+                    levels and the bot will adapt its trading strategy accordingly.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Getting Started</h5>
+            </div>
+            <div class="card-body">
+                <ol class="list-group list-group-numbered mb-0">
+                    <li class="list-group-item">Go to the <strong>Settings</strong> page to configure your trading preferences</li>
+                    <li class="list-group-item">Select your preferred trading pair (e.g., BTC/USD)</li>
+                    <li class="list-group-item">Set your risk level (percentage of portfolio to risk per trade)</li>
+                    <li class="list-group-item">Start the bot and monitor its performance on the <strong>Dashboard</strong></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block last_updated %}
+{{ now.strftime('%Y-%m-%d') }}
+{% endblock %}

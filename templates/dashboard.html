@@ -1,0 +1,182 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card bg-dark">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h3 class="card-title mb-0">Trading Bot Dashboard</h3>
+                    <p class="text-muted mb-0">Monitor your bot's performance and market data in real-time</p>
+                </div>
+                <div>
+                    <span class="me-2">
+                        <span class="status-indicator {% if bot_status == 'running' %}status-running{% else %}status-stopped{% endif %}"></span>
+                        Status: <span id="bot-status-indicator">{{ bot_status|capitalize }}</span>
+                    </span>
+                    <button id="start-bot-btn" class="btn btn-success me-2" {% if bot_status == 'running' %}disabled{% endif %}>
+                        <i class="fas fa-play me-1"></i> Start
+                    </button>
+                    <button id="stop-bot-btn" class="btn btn-danger" {% if bot_status == 'stopped' %}disabled{% endif %}>
+                        <i class="fas fa-stop me-1"></i> Stop
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Portfolio Performance -->
+    <div class="col-md-6 col-lg-3 mb-4 mb-lg-0">
+        <div class="card trading-card h-100">
+            <div class="card-body">
+                <h5 class="card-title text-center">Portfolio Value</h5>
+                <h3 class="text-center" id="portfolio-value">${{ metrics.current_balance|round(2) }}</h3>
+                <div class="text-center mb-2">
+                    <span id="profit-loss-indicator" class="badge {% if metrics.profit_loss >= 0 %}bg-success{% else %}bg-danger{% endif %}">
+                        {% if metrics.profit_loss >= 0 %}+{% endif %}${{ metrics.profit_loss|round(2) }}
+                    </span>
+                </div>
+                <div class="progress">
+                    <div id="profit-progress" class="progress-bar {% if metrics.profit_loss >= 0 %}bg-success{% else %}bg-danger{% endif %}" role="progressbar" 
+                        style="width: {{ (metrics.profit_loss / metrics.initial_balance * 100)|abs|round(2) }}%" 
+                        aria-valuenow="{{ (metrics.profit_loss / metrics.initial_balance * 100)|abs|round(2) }}" 
+                        aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Performance Metrics -->
+    <div class="col-md-6 col-lg-3 mb-4 mb-lg-0">
+        <div class="card trading-card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Performance</h5>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Win Rate:</span>
+                        <span id="win-rate">{{ metrics.win_rate|round(2) }}%</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Trades Executed:</span>
+                        <span id="trades-executed">{{ metrics.trades_executed }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>Initial Balance:</span>
+                        <span>${{ metrics.initial_balance|round(2) }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Current Price -->
+    <div class="col-md-6 col-lg-3 mb-4 mb-lg-0">
+        <div class="card trading-card h-100">
+            <div class="card-body">
+                <h5 class="card-title">BTC/USD</h5>
+                <h3 class="text-center" id="current-price">Loading...</h3>
+                <p class="text-center mb-0">
+                    <span id="price-change" class="badge">0.00%</span>
+                </p>
+                <p class="text-center text-muted small" id="price-updated">Last updated: --</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Last Trade -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card trading-card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Last Trade</h5>
+                {% if last_trade %}
+                <div id="last-trade-info">
+                    <p class="mb-1">
+                        <span class="badge {% if last_trade.action == 'BUY' %}bg-success{% else %}bg-danger{% endif %}">
+                            {{ last_trade.action }}
+                        </span>
+                        <span class="text-muted">{{ last_trade.timestamp }}</span>
+                    </p>
+                    <p class="mb-1">Price: ${{ last_trade.price|round(2) }}</p>
+                    <p class="mb-0">Quantity: {{ last_trade.quantity|round(6) }} BTC</p>
+                </div>
+                {% else %}
+                <div id="last-trade-info">
+                    <p class="text-center text-muted">No trades executed yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Price Chart -->
+    <div class="col-lg-8 mb-4 mb-lg-0">
+        <div class="card trading-card">
+            <div class="card-body">
+                <h5 class="card-title">BTC/USD Price Chart</h5>
+                <div style="height: 300px;">
+                    <canvas id="price-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Trading History -->
+    <div class="col-lg-4">
+        <div class="card trading-card">
+            <div class="card-header">Trading History</div>
+            <div class="card-body" style="height: 300px; overflow-y: auto;">
+                <div id="trading-history">
+                    <div class="text-center text-muted" id="empty-history">
+                        {% if metrics.trades_executed == 0 %}
+                            No trading history available
+                        {% endif %}
+                    </div>
+                    <!-- Trading history will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Wallet Balance -->
+    <div class="col-12">
+        <div class="card trading-card">
+            <div class="card-header">Wallet Balance</div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="wallet-table">
+                        <thead>
+                            <tr>
+                                <th>Asset</th>
+                                <th>Free</th>
+                                <th>Locked</th>
+                                <th>Total</th>
+                                <th>Value (USD)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="5" class="text-center">Loading wallet data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/dashboard.js"></script>
+{% endblock %}
+
+{% block last_updated %}
+{{ now.strftime('%Y-%m-%d %H:%M:%S') }}
+{% endblock %}
