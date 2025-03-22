@@ -10,7 +10,22 @@
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">BTC/USD Price Chart</h5>
-                <div class="chart-container" style="position: relative; height:400px;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <span class="fs-3" id="current-price">$0.00</span>
+                        <span class="badge bg-success ms-2" id="price-change">+0.00%</span>
+                    </div>
+                    <div>
+                        <span class="badge bg-secondary me-2">Status: <span id="trading-status" class="text-danger">Stopped</span></span>
+                        <button id="start-trading-btn" class="btn btn-success btn-sm">
+                            <i class="fas fa-play me-1"></i>Start Trading
+                        </button>
+                        <button id="stop-trading-btn" class="btn btn-danger btn-sm d-none">
+                            <i class="fas fa-stop me-1"></i>Stop Trading
+                        </button>
+                    </div>
+                </div>
+                <div class="chart-container" style="position: relative; height:350px;">
                     <canvas id="priceChart"></canvas>
                 </div>
             </div>
@@ -21,9 +36,23 @@
             <div class="card-body">
                 <h5 class="card-title">Portfolio Overview</h5>
                 <div id="portfolio-overview">
-                    <div class="d-flex justify-content-center">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                    <div class="total-portfolio-value mb-3">
+                        <h3 id="portfolio-value">$0.00</h3>
+                    </div>
+                    <div class="asset-breakdown">
+                        <div class="asset-item d-flex justify-content-between mb-2">
+                            <span>USD:</span>
+                            <span>$<span id="usd-balance">0.00</span></span>
+                        </div>
+                        <div class="asset-item d-flex justify-content-between mb-2">
+                            <span>BTC:</span>
+                            <span><span id="btc-balance">0.00000000</span></span>
+                        </div>
+                    </div>
+                    <div class="portfolio-allocation mt-3">
+                        <div class="progress">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">USD</div>
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">BTC</div>
                         </div>
                     </div>
                 </div>
