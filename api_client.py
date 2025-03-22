@@ -109,8 +109,6 @@ class RoostooClient:
         Returns:
             dict: Wallet balance response
         """
-        url = f"{self.base_url}/v3/balance"
-        
         # Get current timestamp in milliseconds
         timestamp = int(time.time() * 1000)
         
@@ -119,15 +117,18 @@ class RoostooClient:
         # Generate signature
         signature = self._generate_signature(params)
         
-        # Set headers
-        headers = {
-            "RST-API-KEY": self.api_key,
-            "MSG-SIGNATURE": signature
-        }
+        # Build URL with query params
+        query_string = urllib.parse.urlencode(params)
+        url = f"{self.base_url}/v3/balance?{query_string}"
+        
+        # Create request with headers
+        req = urllib.request.Request(url)
+        req.add_header("RST-API-KEY", self.api_key)
+        req.add_header("MSG-SIGNATURE", signature)
         
         try:
-            response = requests.get(url, params=params, headers=headers)
-            return response.json()
+            with urllib.request.urlopen(req) as response:
+                return json.loads(response.read().decode('utf-8'))
         except Exception as e:
             logger.error(f"Error fetching balance: {str(e)}")
             return {"Success": False, "ErrMsg": str(e)}
@@ -167,16 +168,18 @@ class RoostooClient:
         # Generate signature
         signature = self._generate_signature(params)
         
-        # Set headers
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "RST-API-KEY": self.api_key,
-            "MSG-SIGNATURE": signature
-        }
+        # Encode data for POST request
+        data = urllib.parse.urlencode(params).encode('utf-8')
+        
+        # Create request with headers
+        req = urllib.request.Request(url, data=data, method="POST")
+        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+        req.add_header("RST-API-KEY", self.api_key)
+        req.add_header("MSG-SIGNATURE", signature)
         
         try:
-            response = requests.post(url, data=params, headers=headers)
-            return response.json()
+            with urllib.request.urlopen(req) as response:
+                return json.loads(response.read().decode('utf-8'))
         except Exception as e:
             logger.error(f"Error placing order: {str(e)}")
             return {"Success": False, "ErrMsg": str(e)}
@@ -208,16 +211,18 @@ class RoostooClient:
         # Generate signature
         signature = self._generate_signature(params)
         
-        # Set headers
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "RST-API-KEY": self.api_key,
-            "MSG-SIGNATURE": signature
-        }
+        # Encode data for POST request
+        data = urllib.parse.urlencode(params).encode('utf-8')
+        
+        # Create request with headers
+        req = urllib.request.Request(url, data=data, method="POST")
+        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+        req.add_header("RST-API-KEY", self.api_key)
+        req.add_header("MSG-SIGNATURE", signature)
         
         try:
-            response = requests.post(url, data=params, headers=headers)
-            return response.json()
+            with urllib.request.urlopen(req) as response:
+                return json.loads(response.read().decode('utf-8'))
         except Exception as e:
             logger.error(f"Error querying order: {str(e)}")
             return {"Success": False, "ErrMsg": str(e)}
@@ -245,16 +250,18 @@ class RoostooClient:
         # Generate signature
         signature = self._generate_signature(params)
         
-        # Set headers
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "RST-API-KEY": self.api_key,
-            "MSG-SIGNATURE": signature
-        }
+        # Encode data for POST request
+        data = urllib.parse.urlencode(params).encode('utf-8')
+        
+        # Create request with headers
+        req = urllib.request.Request(url, data=data, method="POST")
+        req.add_header("Content-Type", "application/x-www-form-urlencoded")
+        req.add_header("RST-API-KEY", self.api_key)
+        req.add_header("MSG-SIGNATURE", signature)
         
         try:
-            response = requests.post(url, data=params, headers=headers)
-            return response.json()
+            with urllib.request.urlopen(req) as response:
+                return json.loads(response.read().decode('utf-8'))
         except Exception as e:
             logger.error(f"Error cancelling order: {str(e)}")
             return {"Success": False, "ErrMsg": str(e)}
@@ -265,8 +272,6 @@ class RoostooClient:
         Returns:
             dict: Pending order count response
         """
-        url = f"{self.base_url}/v3/pending_count"
-        
         # Get current timestamp in milliseconds
         timestamp = int(time.time() * 1000)
         
@@ -276,15 +281,18 @@ class RoostooClient:
         # Generate signature
         signature = self._generate_signature(params)
         
-        # Set headers
-        headers = {
-            "RST-API-KEY": self.api_key,
-            "MSG-SIGNATURE": signature
-        }
+        # Build URL with query params
+        query_string = urllib.parse.urlencode(params)
+        url = f"{self.base_url}/v3/pending_count?{query_string}"
+        
+        # Create request with headers
+        req = urllib.request.Request(url)
+        req.add_header("RST-API-KEY", self.api_key)
+        req.add_header("MSG-SIGNATURE", signature)
         
         try:
-            response = requests.get(url, params=params, headers=headers)
-            return response.json()
+            with urllib.request.urlopen(req) as response:
+                return json.loads(response.read().decode('utf-8'))
         except Exception as e:
             logger.error(f"Error fetching pending count: {str(e)}")
             return {"Success": False, "ErrMsg": str(e)}
