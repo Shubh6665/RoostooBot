@@ -1,0 +1,440 @@
+import requests
+import pandas as pd
+
+api_key = 'zRKVmre1pJ8KHLsn44ufwM6jsN54pPmM'
+url = f'https://financialmodelingprep.com/api/v3/historical-chart/5min/BTCUSD?apikey={api_key}'
+
+
+response = requests.get(url)
+data = response.json()
+
+
+data_df = pd.DataFrame(data)
+data_df['date'] = pd.to_datetime(data_df['date'])  
+data_df.set_index('date', inplace=True)  
+
+
+print(data_df.head())
+
+data_df['returns'] = data_df['close'].pct_change()
+
+data_df.dropna(inplace=True)
+
+
+data_df[['open', 'high', 'low', 'close', 'volume']] = data_df[['open', 'high', 'low', 'close', 'volume']] / data_df[['open', 'high', 'low', 'close', 'volume']].max()
+
+print(data_df.head())
+
+
+import gym
+from gym import spaces
+import numpy as np
+import pandas as pd
+import ta  # For technical indicators
+
+class TradingEnv(gym.Env):
+    def __init__(self, data, initial_balance=10000, window_size=10):
+        super(TradingEnv, self).__init__()
+        self.data = data.reset_index(drop=True)
+        self.initial_balance = initial_balance
+        self.current_step = window_size  # Start at the window size to have a complete observation
+        self.window_size = window_size  # Look-back period for technical indicators
+        
+        # Initialize balance and crypto owned
+        self.balance = initial_balance
+        self.crypto_owned = 0
+        
+        # Define the action space: Discrete 3 actions (Hold, Buy, Sell)
+        self.action_space = spaces.Discrete(3)
+        
+        # Define observation space: Close price, balance, crypto owned, and some technical indicators
+        self.observation_space = spaces.Box(low=0, high=np.inf, shape=(self.window_size + 4,), dtype=np.float32)
+        
+        self.reset()
+
+    def reset(self):
+        self.current_step = self.window_size  # Reset step to the beginning of data
+        self.balance = self.initial_balance
+        self.crypto_owned = 0
+        return self.get_observation()
+
+    def get_observation(self):
+        frame = self.data.iloc[self.current_step - self.window_size:self.current_step].copy()
+        frame['sma'] = ta.trend.sma_indicator(frame['close'], window=5)
+        frame['rsi'] = ta.momentum.rsi(frame['close'], window=14)
+        frame['sma'] = frame['sma'].fillna(0)
+        frame['rsi'] = frame['rsi'].fillna(0)
+
+        # Normalize the prices and features
+        frame_scaled = frame[['open', 'high', 'low', 'close', 'volume']].max(axis=0)
+        normalized_frame = frame[['close']].values / frame_scaled['close']  # Normalize close price
+        
+        # Return observation as a combination of technical indicators and normalized prices
+        obs = np.concatenate([normalized_frame.flatten(), [self.balance, self.crypto_owned, frame['sma'].iloc[-1], frame['rsi'].iloc[-1]]])
+        return obs
+
+    def step(self, action):
+        current_price = self.data.iloc[self.current_step]['close']
+        prev_balance = self.balance
+        prev_crypto_owned = self.crypto_owned
+        
+        # Action handling: 0 = hold, 1 = buy, 2 = sell
+        if action == 1 and self.balance >= current_price:  # Buy
+            self.crypto_owned += 1
+            self.balance -= current_price
+        elif action == 2 and self.crypto_owned > 0:  # Sell
+            self.crypto_owned -= 1
+            self.balance += current_price
+
+        # Move to the next step
+        self.current_step += 1
+        done = self.current_step >= len(self.data) - 1
+
+        # Calculate portfolio value: balance in USD + crypto value
+        portfolio_value = self.balance + self.crypto_owned * current_price
+        reward = portfolio_value - (prev_balance + prev_crypto_owned * current_price)
+        
+        # Generate next observation
+        next_obs = self.get_observation()
+
+        return next_obs, reward, done, {}
+
+    def render(self):
+        print(f"Step: {self.current_step}, Balance: {self.balance}, Crypto Owned: {self.crypto_owned}")
+
+from stable_baselines3 import PPO
+
+# Initialize custom trading environment with preprocessed data
+env = TradingEnv(data_df)
+env.reset()
+
+# Train PPO model on the environment
+model = PPO("MlpPolicy", env, verbose=1)
+
+# Train for a specified number of timesteps (e.g., 100k steps)
+model.learn(total_timesteps=10000)
+
+# Save the trained model for later use
+model.save("ppo_trading_bot")
+
+
+model = PPO.load("ppo_trading_bot")
+
+
+obs = env.reset()
+for _ in range(len(data_df)):
+    action, _states = model.predict(obs)
+    obs, rewards, done, info = env.step(action)
+    env.render()
+    if done:
+        break
+def get_market_ticker(pair="BTC/USD"):
+    url = "https://mock-api.roostoo.com/v3/ticker"
+    timestamp = int(time.time() * 1000)
+    response = requests.get(url, params={"pair": pair, "timestamp": timestamp})
+    return response.json()
+
+import hmac
+import hashlib
+
+def place_order(api_key, secret_key, pair="BTC/USD", side="BUY", quantity=0.01):
+    url = "https://mock-api.roostoo.com/v3/place_order"
+    timestamp = int(time.time() * 1000)
+    params = {
+        "pair": pair,
+        "side": side,
+        "type": "MARKET",
+        "quantity": quantity,
+        "timestamp": timestamp,
+    }
+    
+    query_string = "&".join([f"{key}={value}" for key, value in sorted(params.items())])
+    signature = hmac.new(secret_key.encode(), query_string.encode(), hashlib.sha256).hexdigest()
+    
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "RST-API-KEY": api_key,
+        "MSG-SIGNATURE": signature,
+    }
+    
+    response = requests.post(url, data=params, headers=headers)
+    return response.json()
+
+import requests
+import time
+import hmac
+import hashlib
+
+# API keys and Roostoo base URL
+API_KEY = 'e9WneuGa4mnfivi96myjEeCF34R9DZZ7W1e3hGX7Dd5tfqXotyMpmV3ICoZ7V1KF'
+SECRET_KEY = 'VfIywmdqBDCNa1XSY3qdqrWDrcFhvHVIdvo2vmi8fY3JPUjEbrIn9gtDX2WOk7d5'
+BASE_URL = "https://mock-api.roostoo.com"
+
+# Function to fetch market data
+def get_ticker(pair="BTC/USD"):
+    url = f"{BASE_URL}/v3/ticker"
+    timestamp = int(time.time() * 1000)
+    params = {"pair": pair, "timestamp": timestamp}
+    response = requests.get(url, params=params)
+    return response.json()
+
+# Function to place an order
+def place_order(pair="BTC/USD", side="BUY", quantity=0.01):
+    url = f"{BASE_URL}/v3/place_order"
+    timestamp = str(int(time.time() * 1000))
+    params = {
+        "pair": pair,
+        "side": side,
+        "type": "MARKET",
+        "quantity": quantity,
+        "timestamp": timestamp,
+    }
+
+    # Signature Generation
+    query_string = "&".join([f"{key}={value}" for key, value in sorted(params.items())])
+    signature = hmac.new(SECRET_KEY.encode(), query_string.encode(), hashlib.sha256).hexdigest()
+
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "RST-API-KEY": API_KEY,
+        "MSG-SIGNATURE": signature,
+    }
+
+    response = requests.post(url, data=params, headers=headers)
+    return response.json()
+
+# Main function to trade based on model's prediction
+def trade_with_model(model, env):
+    obs = env.reset()
+
+    while True:
+        action, _states = model.predict(obs)
+        obs, rewards, done, info = env.step(action)
+
+        # Get current market data (BTC/USD)
+        market_data = get_ticker(pair="BTC/USD")
+        current_price = market_data["Data"]["BTC/USD"]["LastPrice"]
+
+        # Check account balance and make trade decisions
+        balance_data = get_balance(API_KEY, SECRET_KEY)
+        usd_balance = balance_data["SpotWallet"]["USD"]["Free"]
+        btc_balance = balance_data["SpotWallet"]["BTC"]["Free"]
+
+        if action == 1 and usd_balance >= current_price:  # BUY
+            print(f"Buying BTC at {current_price}")
+            place_order(pair="BTC/USD", side="BUY", quantity=0.01)
+
+        elif action == 2 and btc_balance > 0:  # SELL
+            print(f"Selling BTC at {current_price}")
+            place_order(pair="BTC/USD", side="SELL", quantity=0.01)
+
+        if done:
+            break
+
+        time.sleep(300)  # 5-minute interval for the next trade
+
+# Call this function to start trading with the trained model
+trade_with_model(model, env)
+import requests
+import hashlib
+import hmac
+import time
+
+# Replace these with your actual API key and secret key
+API_KEY = "e9WneuGa4mnfivi96myjEeCF34R9DZZ7W1e3hGX7Dd5tfqXotyMpmV3ICoZ7V1KF"
+SECRET = "VfIywmdqBDCNa1XSY3qdqrWDrcFhvHVIdvo2vmi8fY3JPUjEbrIn9gtDX2WOk7d5"
+
+BASE_URL = "https://mock-api.roostoo.com"
+
+# Function to generate HMAC SHA256 signature using the global SECRET
+def generate_signature(params):
+    query_string = '&'.join(["{}={}".format(k, params[k]) for k in sorted(params.keys())])
+    us = SECRET.encode('utf-8')
+    m = hmac.new(us, query_string.encode('utf-8'), hashlib.sha256)
+    return m.hexdigest()
+
+# Function to fetch server time
+def get_server_time():
+    r = requests.get(BASE_URL + "/v3/serverTime")
+    print(r.status_code, r.text)
+    return r.json()
+
+# Function to fetch exchange information
+def get_ex_info():
+    r = requests.get(BASE_URL + "/v3/exchangeInfo")
+    print(r.status_code, r.text)
+    return r.json()
+
+# Function to fetch market ticker
+def get_ticker(pair=None):
+    payload = {"timestamp": int(time.time()) * 1000}
+    if pair:
+        payload["pair"] = pair
+
+    r = requests.get(BASE_URL + "/v3/ticker", params=payload)
+    print(r.status_code, r.text)
+    return r.json()
+
+# Function to fetch wallet balance
+def get_balance(api_key, secret_key):
+    payload = {"timestamp": int(time.time()) * 1000}
+    headers = {
+        "RST-API-KEY": api_key,
+        "MSG-SIGNATURE": generate_signature(payload),
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+    r = requests.get(BASE_URL + "/v3/balance", params=payload, headers=headers)
+    print(r.status_code, r.text)
+    try:
+        data = r.json()
+    except Exception as e:
+        print("Error decoding JSON in get_balance:", e)
+        data = {}  # Return empty dict or handle as needed
+    return data
+
+
+# Function to place an order
+def place_order(coin, side, qty, price=None):
+    payload = {
+        "timestamp": int(time.time()) * 1000,
+        "pair": coin + "/USD",
+        "side": side,
+        "quantity": qty,
+    }
+
+    if not price:
+        payload['type'] = "MARKET"
+    else:
+        payload['type'] = "LIMIT"
+        payload['price'] = price
+
+    headers = {
+        "RST-API-KEY": API_KEY,
+        "MSG-SIGNATURE": generate_signature(payload),
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+
+    r = requests.post(BASE_URL + "/v3/place_order", data=payload, headers=headers)
+    print(r.status_code, r.text)
+
+# Function to cancel an order
+def cancel_order(pair="BTC/USD"):
+    payload = {"timestamp": int(time.time()) * 1000, "pair": pair}
+
+    headers = {
+        "RST-API-KEY": API_KEY,
+        "MSG-SIGNATURE": generate_signature(payload),
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+
+    r = requests.post(BASE_URL + "/v3/cancel_order", data=payload, headers=headers)
+    print(r.status_code, r.text)
+
+# Function to query an order
+def query_order(order_id=None):
+    payload = {"timestamp": int(time.time()) * 1000}
+    
+    if order_id:
+        payload["order_id"] = order_id
+
+    headers = {
+        "RST-API-KEY": API_KEY,
+        "MSG-SIGNATURE": generate_signature(payload),
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+
+    r = requests.post(BASE_URL + "/v3/query_order", data=payload, headers=headers)
+    print(r.status_code, r.text)
+
+# Function to check pending order count
+def pending_count():
+    payload = {"timestamp": int(time.time()) * 1000}
+
+    headers = {
+        "RST-API-KEY": API_KEY,
+        "MSG-SIGNATURE": generate_signature(payload),
+        "Content-Type": "application/x-www-form-urlencoded",
+    }
+
+    r = requests.get(BASE_URL + "/v3/pending_count", params=payload, headers=headers)
+    print(r.status_code, r.text)
+    return r.json()
+
+# Main function for testing all endpoints
+if __name__ == '__main__':
+    # Test all functions sequentially
+    print("Fetching server time...")
+    get_server_time()
+    
+    print("Fetching exchange information...")
+    get_ex_info()
+    
+    print("Fetching market ticker...")
+    get_ticker("BTC/USD")
+    
+    print("Fetching wallet balance...")
+    balance_data = get_balance(API_KEY, SECRET)
+
+    # Process the balance data
+    if balance_data["Success"]:
+        spot_wallet = balance_data.get("Wallet", {})
+        btc_balance = spot_wallet.get("BTC", {}).get("Free", 0)
+        usd_balance = spot_wallet.get("USD", {}).get("Free", 0)
+        print(f"BTC Balance: {btc_balance}, USD Balance: {usd_balance}")
+    else:
+        print(f"Error fetching balance: {balance_data['ErrMsg']}")
+        
+    # Example: Place a BUY order (optional)
+    place_order("BTC", "BUY", qty=0.01)
+        
+    print("Querying orders...")
+    query_order()
+        
+    print("Canceling orders...")
+    cancel_order()
+        
+    print("Checking pending orders...")
+    pending_count()
+
+while True:
+    try:
+        # Fetch real-time market data for BTC/USD
+        market_data = get_ticker("BTC/USD")  # Ensure the correct function name is used
+        current_price = market_data["Data"]["BTC/USD"]["LastPrice"]
+
+        # Fetch updated balance and crypto holdings
+        balance_data = get_balance(API_KEY, SECRET)
+
+        if balance_data["Success"]:
+            spot_wallet = balance_data.get("Wallet", {})
+            btc_balance = spot_wallet.get("BTC", {}).get("Free", 0)
+            usd_balance = spot_wallet.get("USD", {}).get("Free", 0)
+        else:
+            print(f"Error fetching balance: {balance_data['ErrMsg']}")
+            time.sleep(300)  # Wait for 5 minutes before retrying
+            continue
+
+        # Create observation state for RL model
+        obs = [current_price, usd_balance, btc_balance]
+
+        # Predict action using trained model
+        action, _states = model.predict(obs)
+        
+        # Execute trade based on action
+        if action == 1 and usd_balance >= current_price:  # BUY condition
+            print(f"Buying BTC at ${current_price}")
+            place_order("BTC", "BUY", qty=0.01)  # Make sure to use correct qty based on balance
+
+        elif action == 2 and btc_balance > 0:  # SELL condition
+            print(f"Selling BTC at ${current_price}")
+            place_order("BTC", "SELL", qty=0.01)  # Make sure to use correct qty based on balance
+
+        print(f"Updated USD Balance: ${usd_balance}, Updated BTC Owned: {btc_balance}")
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
+    
+    time.sleep(300)  # Wait for next interval (5 minutes)
+
+
+
