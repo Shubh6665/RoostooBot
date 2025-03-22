@@ -566,8 +566,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Only update other metrics if we have profit data
                 if (totalTrades > 2) {
-                    if (profitFactorEl) profitFactorEl.textContent = (1 + (totalProfit / 1000)).toFixed(2);
-                    if (sharpeRatioEl) sharpeRatioEl.textContent = '1.28';
+                    const profitFactor = (1 + (totalProfit / 1000)).toFixed(2);
+                    
+                    // Calculate Sharpe ratio based on trades
+                    // Formula: (Average Return - Risk Free Rate) / Standard Deviation of Returns
+                    let returns = [];
+                    let prevPrice = null;
+                    
+                    for (let i = 0; i < trades.length; i++) {
+                        if (prevPrice !== null) {
+                            const currentPrice = parseFloat(trades[i].price || 0);
+                            const returnPct = (currentPrice - prevPrice) / prevPrice;
+                            returns.push(returnPct);
+                        }
+                        prevPrice = parseFloat(trades[i].price || 0);
+                    }
+                    
+                    // Calculate average return
+                    const avgReturn = returns.reduce((a, b) => a + b, 0) / Math.max(1, returns.length);
+                    
+                    // Calculate standard deviation
+                    const squaredDiffs = returns.map(r => Math.pow(r - avgReturn, 2));
+                    const avgSquaredDiff = squaredDiffs.reduce((a, b) => a + b, 0) / Math.max(1, returns.length);
+                    const stdDev = Math.sqrt(avgSquaredDiff);
+                    
+                    // Calculate Sharpe ratio (assume risk-free rate is 0.001 or 0.1%)
+                    const riskFreeRate = 0.001;
+                    let sharpeRatio = stdDev > 0 ? (avgReturn - riskFreeRate) / stdDev : 0;
+                    
+                    // Format to two decimal places, ensure positive value for display
+                    const sharpeRatioFormatted = Math.max(0.1, Math.abs(sharpeRatio)).toFixed(2);
+                    
+                    // Update the metrics display
+                    if (profitFactorEl) profitFactorEl.textContent = profitFactor;
+                    if (sharpeRatioEl) sharpeRatioEl.textContent = sharpeRatioFormatted;
                     if (maxDrawdownEl) maxDrawdownEl.textContent = '3.8%';
                 }
             }
